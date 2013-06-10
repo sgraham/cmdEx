@@ -4,9 +4,12 @@ Scott Graham <scott.cmdex@h4ck3r.net>
 
 cmdEx makes some small improvements to cmd.exe. Currently:
 
-In PROMPT, $M displays git branch information instead of its normal function.
+- In PROMPT, $M displays git branch information instead of its normal function.
 
-It is currently only known to work on Windows 7, and only for x86 cmd.exe.
+(TODO) - Suppress "Terminate batch job (Y/N)?" prompt.
+
+
+cmdEx is currently only known to work on Windows 7, and only for x86 cmd.exe.
 
 
 Build:
