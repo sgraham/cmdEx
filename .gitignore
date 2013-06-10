@@ -1,6 +1,7 @@
 *.ilk
 *.pdb
 *.obj
+*.res
 third_party/
 tags
 csearchindex

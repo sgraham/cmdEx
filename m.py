@@ -12,43 +12,43 @@ def Run(args):
   subprocess.check_call(args, shell=True)
 
 
-def Build():
+def Build(release):
   if os.path.exists('out'):
     Run(['rmdir', '/s', '/q', 'out'])
   os.makedirs('out')
-  flags = [
+  cflags = [
       '/nologo',
-      #'/Ox',
       '/Zi',
       '/W4',
+      '/WX',
       '/Ithird_party/libgit2/include',
       '/D_WIN32_WINNT=0x0501',
       '/D_CRT_SECURE_NO_WARNINGS',
     ]
-  Run(['cl'] + flags +
+  if release:
+    cflags.append('/Ox')
+    cflags.append('/DNDEBUG')
+  Run(['cl'] + cflags +
       ['dll.cc',
        '/link',
-       'third_party\\libgit2\\Release\\git2.lib',
        '/dll',
        '/out:out\\cmdEx_dll_x86.dll'])
-  Run(['cl'] + flags +
+  Run(['cl'] + cflags +
       ['inject.cc',
        '/link',
        '/out:out\\cmdEx_x86.exe'])
-  Run(['cl'] + flags +
+  Run(['rc'
+       '/nologo',
+       '/r',
+       'resource.rc'])
+  Run(['cl'] + cflags +
       ['main.cc',
+       'resource.res',
        '/link',
        '/out:out\\cmdEx.exe'])
   shutil.copyfile('third_party\\libgit2\\Release\\git2.dll',
                   'out\\git2.dll')
   return 0
-
-
-def Package():
-  """Glom cmdEx_dll_{x86,x64}.dll, cmdEx_{x86,x64}.exe, git2_{x86,x64}.dll
-  into cmdEx.exe for better distribution. TODO: cmdEx doesn't know how to
-  do this yet."""
-  pass
 
 
 def TestInNew():
@@ -60,12 +60,12 @@ def TestInNew():
 
 def main():
   cmds = {
-    'build': Build,
+    'debug': lambda: Build(False),
+    'release': lambda: Build(True),
     'testnew': TestInNew,
-    'package': Package,
   }
   if len(sys.argv) < 2:
-    return cmds['build']()
+    return cmds['debug']()
   for cmd in sys.argv[1:]:
     ret = cmds[cmd]()
     if ret != 0:

@@ -16,6 +16,17 @@
 
 namespace {
 
+#define GIT2_FUNCTIONS \
+  X(git_branch_name) \
+  X(git_reference_free) \
+  X(git_repository_discover) \
+  X(git_repository_head) \
+  X(git_repository_open)
+
+#define X(name) decltype(name)* g_ ## name;
+GIT2_FUNCTIONS
+#undef X
+
 /*
 // Replaces PromptUser, and doesn't do "Terminate batch job (Y/N)?" (assumes
 // always 'y').
@@ -57,6 +68,26 @@ void ReadInto(const std::string& path, char* buffer) {
   fclose(fp);
 }
 
+// We are in cmd's directory, so loading git2.dll (delayed or otherwise) may
+// fail. Instead, LoadLibrary and GetProcAddress the functions we need from
+// the same directory as our dll is in.
+void LoadGit2FunctionPointers(HMODULE self) {
+  char module_location[_MAX_PATH];
+  GetModuleFileName(self, module_location, sizeof(module_location));
+  char* slash = strrchr(module_location, '\\');
+  if (!slash) {
+    Error("couldn't find self location");
+    return;
+  }
+  *slash = 0;
+  strcat(module_location, "\\git2.dll");
+  HMODULE git2 = LoadLibrary(module_location);
+#define X(name) \
+  g_##name = reinterpret_cast<decltype(name)*>(GetProcAddress(git2, #name));
+  GIT2_FUNCTIONS
+#undef X
+}
+
 // Replacement for WNetGetConnectionW that gets the git branch for the
 // specified local path instead.
 DWORD APIENTRY GetGitBranch(
@@ -74,17 +105,21 @@ DWORD APIENTRY GetGitBranch(
   if (GetCurrentDirectory(sizeof(local_path), local_path) == 0)
     return NO_ERROR;
   char git_dir[_MAX_PATH];
-  if (git_repository_discover(git_dir, sizeof(git_dir), local_path, 0, "") != 0)
+  if (g_git_repository_discover(git_dir, sizeof(git_dir), local_path, 0, "") !=
+      0)
     return NO_ERROR;
   git_repository* repo;
-  if (git_repository_open(&repo, git_dir) != 0)
+  if (g_git_repository_open(&repo, git_dir) != 0)
     return NO_ERROR;
 
   git_reference* head_ref = NULL;
-  if (git_repository_head(&head_ref, repo) != 0)
+  if (g_git_repository_head(&head_ref, repo) != 0) {
+    // TODO: we could be more useful/fancy here.
+    wcscpy(remote, L"[(no branch)] ");
     return NO_ERROR;
+  }
   const char* head_name;
-  git_branch_name(&head_name, head_ref);
+  g_git_branch_name(&head_name, head_ref);
 
   char name[_MAX_PATH] = {0};
   char extra[_MAX_PATH] = {0};
@@ -115,7 +150,7 @@ DWORD APIENTRY GetGitBranch(
   MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, entire, -1, remote, *length);
   // No error to check; if it fails we return empty.
 
-  git_reference_free(head_ref);
+  g_git_reference_free(head_ref);
   return NO_ERROR;
 }
 
@@ -307,10 +342,12 @@ const char* GetKernelDll() {
   return "kernel32.dll";
 }
 
-void OnAttach() {
+void OnAttach(HMODULE self) {
   // Push the modified prompt into the environment. The implementation of $M
   // adds a space for no good reason, so use a $H after it to remove that.
   _putenv("PROMPT=$M$H$P$G");
+
+  LoadGit2FunctionPointers(self);
 
   // Trap in GetDriveTypeW (this guards the call to WNetGetConnectionW we want
   // to override. When it's next called and it matches the callsite we want,
@@ -336,7 +373,7 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID unused) {
   (void)unused;
   switch (reason) {
     case DLL_PROCESS_ATTACH:
-      OnAttach();
+      OnAttach(instance);
       break;
   }
   return TRUE;

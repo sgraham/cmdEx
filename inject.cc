@@ -28,12 +28,16 @@ void Fatal(const char* msg, ...) {
 }
 
 void Log(const char* msg, ...) {
+#ifndef NDEBUG
   va_list ap;
   fprintf(stderr, "cmdEx: ");
   va_start(ap, msg);
   vfprintf(stderr, msg, ap);
   va_end(ap);
   fprintf(stderr, "\n");
+#else
+  (void)msg;
+#endif
 }
 
 // Either SuspendThread or ResumeThread's all thread in the process identified
