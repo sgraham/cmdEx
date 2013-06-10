@@ -47,31 +47,21 @@ DWORD APIENTRY GetGitBranch(
   if (GetCurrentDirectory(sizeof(local_path), local_path) == 0)
     return NO_ERROR;
   char git_dir[_MAX_PATH];
-  fprintf(stderr, "start at: %s\n", local_path);
   if (git_repository_discover(git_dir, sizeof(git_dir), local_path, 0, "") != 0)
     return NO_ERROR;
   git_repository* repo;
-  fprintf(stderr, "git_dir: %s\n", git_dir);
   if (git_repository_open(&repo, git_dir) != 0)
     return NO_ERROR;
 
   git_reference* head_ref = NULL;
   if (git_repository_head(&head_ref, repo) != 0)
     return NO_ERROR;
-  fprintf(stderr, "here: %p\n", head_ref);
-  git_ref_t head_type = git_reference_type(head_ref);
-  if (head_type == GIT_REF_OID) {
-    const git_oid* oid = git_reference_target(head_ref);
-    if (oid) {
-      wcscpy(remote, L"todo; oid");
-    }
-  } else if (head_type == GIT_REF_SYMBOLIC) {
-    const char* name = git_reference_symbolic_target(head_ref);
-    if (name) {
-      (void)length;
-      wcscpy(remote, L"todo; sym");
-    }
-  }
+  const char* name;
+  git_branch_name(&name, head_ref);
+
+  // Not sure if this is ACP or UTF-8.
+  MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, name, -1, remote, *length);
+  // No error to check; if it fails we return empty.
 
   git_reference_free(head_ref);
   return NO_ERROR;

@@ -26,32 +26,11 @@ void Fatal(const char* msg, ...) {
 
 void Log(const char* msg, ...) {
   va_list ap;
-  fprintf(stdout, "cmdEx: ");
+  fprintf(stderr, "cmdEx: ");
   va_start(ap, msg);
-  vfprintf(stdout, msg, ap);
+  vfprintf(stderr, msg, ap);
   va_end(ap);
-  fprintf(stdout, "\n");
-}
-
-typedef LONG(
-    WINAPI* NtQueryInformationProcessType)(HANDLE, ULONG, PVOID, ULONG, PULONG);
-
-// Retrieves the pid of the parent of the current process. In our case, this
-// should be the cmd.exe that ran this program.
-DWORD GetParentPid() {
-  NtQueryInformationProcessType function_pointer =
-      reinterpret_cast<NtQueryInformationProcessType>(GetProcAddress(
-          LoadLibraryA("ntdll.dll"), "NtQueryInformationProcess"));
-  if (function_pointer) {
-    ULONG_PTR pbi[6];
-    ULONG size;
-    LONG ret =
-        function_pointer(GetCurrentProcess(), 0, &pbi, sizeof(pbi), &size);
-    if (ret >= 0 && size == sizeof(pbi))
-      return static_cast<DWORD>(pbi[5]);
-  }
-
-  return 0;
+  fprintf(stderr, "\n");
 }
 
 // Either SuspendThread or ResumeThread's all thread in the process identified
@@ -137,11 +116,13 @@ void Inject(DWORD target_pid) {
 
 }  // namespace
 
-int main() {
-  DWORD target_pid = GetParentPid();
-  //Log("injecting into %d", target_pid);
-  if (!target_pid)
-    Fatal("failed to get parent pid");
+int main(int argc, char** argv) {
+  if (argc != 2)
+    Fatal("no target injection pid specified");
+  DWORD target_pid = atoi(argv[1]);
+  if (target_pid == 0)
+    Fatal("argv[1] didn't look like pid");
+  Log("injecting into %d", target_pid);
   Inject(target_pid);
   return 0;
 }
