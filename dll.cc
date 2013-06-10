@@ -62,6 +62,8 @@ std::string JoinPath(const std::string& a, const std::string& b) {
   return a + "/" + b;
 }
 
+// Reads |path| into |buffer| which is assumed to be large enough to hold
+// _MAX_PATH. Trailing spaces are trimmed.
 void ReadInto(const std::string& path, char* buffer) {
   FILE *fp = fopen(path.c_str(), "rb");
   if (!fp) {
@@ -123,8 +125,8 @@ DWORD APIENTRY GetGitBranch(
 
   git_reference* head_ref = NULL;
   if (g_git_repository_head(&head_ref, repo) != 0) {
-    // TODO: more useful/fancy here?
-    wcscpy(remote, L"[(no head)] ");
+    // TODO: More useful/fancy here?
+    wcscpy(remote, L"[(no head)]");
     return NO_ERROR;
   }
 
@@ -168,7 +170,7 @@ DWORD APIENTRY GetGitBranch(
   }
 
   char entire[_MAX_PATH];
-  sprintf(entire, "[%s%s] ", name, extra);
+  sprintf(entire, "[%s%s]", name, extra);
 
   // Not sure if this is ACP or UTF-8.
   MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, entire, -1, remote, *length);
@@ -368,8 +370,8 @@ const char* GetKernelDll() {
 
 void OnAttach(HMODULE self) {
   // Push the modified prompt into the environment. The implementation of $M
-  // adds a space for no good reason, so use a $H after it to remove that.
-  _putenv("PROMPT=$M$H$P$G");
+  // adds a space for no particularly good reason, so don't add another.
+  _putenv("PROMPT=$M$P$G");
 
   LoadGit2FunctionPointers(self);
 
