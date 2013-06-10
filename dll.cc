@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#pragma warning(disable: 4530)
 #include <string>
 
 #include "git2.h"

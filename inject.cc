@@ -6,8 +6,11 @@
 #include <TlHelp32.h>
 #include <stdio.h>
 
-#define AS_STR(x) STR_IMPL(x)
-#define STR_IMPL(x) #x
+#ifdef _M_IX86
+const char g_dll_name[] = "cmdEx_dll_x86.dll";
+#else
+#error
+#endif
 
 namespace {
 
@@ -58,7 +61,7 @@ void Inject(DWORD target_pid) {
   GetModuleFileName(NULL, dll_path, sizeof(dll_path));
   char* slash = strrchr(dll_path, '\\');
   if (slash)
-    strcpy(slash + 1, "cmdEx_dll_" AS_STR(ARCH) ".dll");
+    strcpy(slash + 1, g_dll_name);
 
   // Get a handle to the target process.
   HANDLE target_process =
