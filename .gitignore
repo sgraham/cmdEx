@@ -1,3 +1,8 @@
 *.ilk
 *.pdb
 third_party/
+tags
+csearchindex
+downstreamstore
+misc/
+out/
