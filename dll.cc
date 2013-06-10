@@ -52,6 +52,11 @@ bool IsDirectory(const std::string& path) {
   return _stat(path.c_str(), &buffer) == 0 && (buffer.st_mode & _S_IFDIR);
 }
 
+bool IsFile(const std::string& path) {
+  struct _stat buffer;
+  return _stat(path.c_str(), &buffer) == 0 && (buffer.st_mode & _S_IFREG);
+}
+
 std::string JoinPath(const std::string& a, const std::string& b) {
   // TODO: normpath.
   return a + "/" + b;
@@ -64,8 +69,12 @@ void ReadInto(const std::string& path, char* buffer) {
     return;
   }
   size_t read = fread(buffer, sizeof(char), _MAX_PATH, fp);
-  buffer[read] = 0;
   fclose(fp);
+  buffer[read--] = 0;
+  while (isspace(buffer[read])) {
+    buffer[read] = 0;
+    --read;
+  }
 }
 
 // We are in cmd's directory, so loading git2.dll (delayed or otherwise) may
@@ -118,15 +127,9 @@ DWORD APIENTRY GetGitBranch(
     wcscpy(remote, L"[(no head)] ");
     return NO_ERROR;
   }
-  const char* head_name = "";
-  if (g_git_branch_name(&head_name, head_ref) != 0) {
-    wcscpy(remote, L"[(no branch)] ");
-    return NO_ERROR;
-  }
 
   char name[_MAX_PATH] = {0};
   char extra[_MAX_PATH] = {0};
-  strcpy(name, head_name);
 
   if (IsDirectory(JoinPath(git_dir, "rebase-merge"))) {
     ReadInto(JoinPath(git_dir, "rebase-merge/head-name"), name);
@@ -135,7 +138,19 @@ DWORD APIENTRY GetGitBranch(
     ReadInto(JoinPath(git_dir, "rebase-merge/end"), total);
     sprintf(extra, " %s/%s", step, total);
   } else if (IsDirectory(JoinPath(git_dir, "rebase-apply"))) {
-    strcpy(extra, "|todo; rebase-apply");
+    char step[_MAX_PATH], total[_MAX_PATH];
+    ReadInto(JoinPath(git_dir, "rebase-apply/next"), step);
+    ReadInto(JoinPath(git_dir, "rebase-apply/last"), total);
+    const char* suffix = "";
+    if (IsFile(JoinPath(git_dir, "rebase-apply/rebasing"))) {
+      ReadInto(JoinPath(git_dir, "rebase-apply/head-name"), name);
+      suffix = "|REBASE";
+    } else if (IsFile(JoinPath(git_dir, "rebase-apply/applying"))) {
+      suffix = "|AM";
+    } else {
+      suffix = "|AM/REBASE";
+    }
+    sprintf(extra, " %s/%s%s", step, total, suffix);
   } else if (IsDirectory(JoinPath(git_dir, "MERGE_HEAD"))) {
     strcpy(extra, "|MERGING");
   } else if (IsDirectory(JoinPath(git_dir, "CHERRY_PICK_HEAD"))) {
@@ -144,6 +159,12 @@ DWORD APIENTRY GetGitBranch(
     strcpy(extra, "|REVERTING");
   } else if (IsDirectory(JoinPath(git_dir, "BISECT_LOG"))) {
     strcpy(extra, "|BISECTING");
+  } else {
+    const char* head_name = "";
+    if (g_git_branch_name(&head_name, head_ref) != 0)
+      strcpy(name, "(no branch)");
+    else
+      strcpy(name, head_name);
   }
 
   char entire[_MAX_PATH];
