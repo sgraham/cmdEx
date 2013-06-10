@@ -28,5 +28,6 @@ C:\...\cmdEx>cmdEx
 
 
 
-If you're looking for something like this, but is a more wholesale behaviour
-change, you might try http://code.google.com/p/clink/.
+Similar project, but more wholesale behaviour replacement:
+http://code.google.com/p/clink/. Some of cmdEx's injection code is based on
+Clink's.
