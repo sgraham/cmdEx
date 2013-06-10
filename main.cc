@@ -72,14 +72,34 @@ bool GetFileResource(int resource_id, unsigned char** data, size_t* size) {
 void ExtractFileResource(int resource_id, const char* filename) {
   unsigned char* data;
   size_t size;
+#ifndef NDEBUG
+    fprintf(stderr, "Extract: %d %s\n", resource_id, filename);
+#endif
   if (GetFileResource(resource_id, &data, &size)) {
 #ifndef NDEBUG
     fprintf(
         stderr, "writing %d to %s (%d bytes)\n", resource_id, filename, size);
 #endif
     FILE* fp = fopen(filename, "wb");
-    if (!fp)
-      Fatal("couldn't open %s", filename);
+    if (!fp) {
+      const size_t kBufSize = 10<<20;
+      void* buf = malloc(kBufSize);
+      FILE* readfp = fopen(filename, "rb");
+      if (readfp) {
+        size_t bytes_read = fread(buf, 1, kBufSize, readfp);
+        fclose(readfp);
+        if (bytes_read == size && memcmp(data, buf, size) == 0) {
+          // It's locked (in use), but it's the same as what we have in
+          // our binary, so we're OK.
+          free(buf);
+          return;
+        }
+      } else {
+        Fatal("couldn't open %s for read", filename);
+      }
+      Fatal("couldn't open %s, and it's out of date", filename);
+    }
+
     fwrite(data, 1, size, fp);
     fclose(fp);
   } else {
