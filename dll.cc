@@ -4,8 +4,13 @@
 
 #include <windows.h>
 #include <DelayImp.h>
+
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
+
+#include <string>
+
 #include "git2.h"
 
 namespace {
@@ -28,6 +33,27 @@ void Error(const char* msg, ...) {
   vfprintf(stderr, msg, ap);
   va_end(ap);
   fprintf(stderr, "\n");
+}
+
+bool IsDirectory(const std::string& path) {
+  struct _stat buffer;
+  return _stat(path.c_str(), &buffer) == 0 && (buffer.st_mode & _S_IFDIR);
+}
+
+std::string JoinPath(const std::string& a, const std::string& b) {
+  // TODO: normpath.
+  return a + "/" + b;
+}
+
+void ReadInto(const std::string& path, char* buffer) {
+  FILE *fp = fopen(path.c_str(), "rb");
+  if (!fp) {
+    buffer[0] = 0;
+    return;
+  }
+  size_t read = fread(buffer, sizeof(char), _MAX_PATH, fp);
+  buffer[read] = 0;
+  fclose(fp);
 }
 
 // Replacement for WNetGetConnectionW that gets the git branch for the
@@ -56,11 +82,36 @@ DWORD APIENTRY GetGitBranch(
   git_reference* head_ref = NULL;
   if (git_repository_head(&head_ref, repo) != 0)
     return NO_ERROR;
-  const char* name;
-  git_branch_name(&name, head_ref);
+  const char* head_name;
+  git_branch_name(&head_name, head_ref);
+
+  char name[_MAX_PATH] = {0};
+  char extra[_MAX_PATH] = {0};
+  strcpy(name, head_name);
+
+  if (IsDirectory(JoinPath(git_dir, "rebase-merge"))) {
+    ReadInto(JoinPath(git_dir, "rebase-merge/head-name"), name);
+    char step[_MAX_PATH], total[_MAX_PATH];
+    ReadInto(JoinPath(git_dir, "rebase-merge/msgnum"), step);
+    ReadInto(JoinPath(git_dir, "rebase-merge/end"), total);
+    sprintf(extra, " %s/%s", step, total);
+  } else if (IsDirectory(JoinPath(git_dir, "rebase-apply"))) {
+    strcpy(extra, "|todo; rebase-apply");
+  } else if (IsDirectory(JoinPath(git_dir, "MERGE_HEAD"))) {
+    strcpy(extra, "|MERGING");
+  } else if (IsDirectory(JoinPath(git_dir, "CHERRY_PICK_HEAD"))) {
+    strcpy(extra, "|CHERRY-PICKING");
+  } else if (IsDirectory(JoinPath(git_dir, "REVERT_HEAD"))) {
+    strcpy(extra, "|REVERTING");
+  } else if (IsDirectory(JoinPath(git_dir, "BISECT_LOG"))) {
+    strcpy(extra, "|BISECTING");
+  }
+
+  char entire[_MAX_PATH];
+  sprintf(entire, "%s%s", name, extra);
 
   // Not sure if this is ACP or UTF-8.
-  MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, name, -1, remote, *length);
+  MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, entire, -1, remote, *length);
   // No error to check; if it fails we return empty.
 
   git_reference_free(head_ref);
