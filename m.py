@@ -44,6 +44,13 @@ def Build():
   return 0
 
 
+def Package():
+  """Glom cmdEx_dll_{x86,x64}.dll, cmdEx_{x86,x64}.exe, git2_{x86,x64}.dll
+  into cmdEx.exe for better distribution. TODO: cmdEx doesn't know how to
+  do this yet."""
+  pass
+
+
 def TestInNew():
   Run(['C:\\Windows\\SysWOW64\\cmd.exe', '/k', 'out\\cmdEx.exe'])
 
@@ -52,6 +59,7 @@ def main():
   cmds = {
     'build': Build,
     'testnew': TestInNew,
+    'package': Package,
   }
   if len(sys.argv) < 2:
     return cmds['build']()

@@ -59,6 +59,10 @@ int main() {
   const char* arch = "x64";
   if (_stricmp(processor_architecture, "x86") == 0)
     arch = "x86";
+  // TODO: Embedded resource-y stuff.
+  // http://blog.kowalczyk.info/article/zy/Embedding-binary-resources-on-Windows.html
+  // If we can FindResource our sub binaries, extract them to a temporary
+  // folder and run from there.
   char buf[1024];
   sprintf(buf, "%s_%s.exe %d", exe_name, arch, parent_pid);
   return system(buf);
