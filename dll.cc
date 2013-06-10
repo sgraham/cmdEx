@@ -109,7 +109,7 @@ DWORD APIENTRY GetGitBranch(
   }
 
   char entire[_MAX_PATH];
-  sprintf(entire, "%s%s", name, extra);
+  sprintf(entire, "[%s%s] ", name, extra);
 
   // Not sure if this is ACP or UTF-8.
   MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, entire, -1, remote, *length);
@@ -289,7 +289,7 @@ LONG WINAPI HookTrap(EXCEPTION_POINTERS* info) {
 void OnAttach() {
   // Push the modified prompt into the environment. The implementation of $M
   // adds a space for no good reason, so use a $H after it to remove that.
-  _putenv("PROMPT=[$M$H] $P$G");
+  _putenv("PROMPT=$M$H$P$G");
 
   // Trap in GetDriveTypeW (this guards the call to WNetGetConnectionW we want
   // to override. When it's next called and it matches the callsite we want,
