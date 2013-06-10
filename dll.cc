@@ -114,12 +114,15 @@ DWORD APIENTRY GetGitBranch(
 
   git_reference* head_ref = NULL;
   if (g_git_repository_head(&head_ref, repo) != 0) {
-    // TODO: we could be more useful/fancy here.
+    // TODO: more useful/fancy here?
+    wcscpy(remote, L"[(no head)] ");
+    return NO_ERROR;
+  }
+  const char* head_name = "";
+  if (g_git_branch_name(&head_name, head_ref) != 0) {
     wcscpy(remote, L"[(no branch)] ");
     return NO_ERROR;
   }
-  const char* head_name;
-  g_git_branch_name(&head_name, head_ref);
 
   char name[_MAX_PATH] = {0};
   char extra[_MAX_PATH] = {0};

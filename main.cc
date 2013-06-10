@@ -91,6 +91,10 @@ void ExtractFileResource(int resource_id, const char* filename) {
 
 int main() {
   DWORD parent_pid = GetParentPid();
+
+  // TODO: I think this doesn't work at all because this program is
+  // compiled as x86 or x64, and PROCESSOR_ARCHITECTURE is modified from
+  // the parent. We need to retrieve ParentPid's arch.
   char* processor_architecture = getenv("PROCESSOR_ARCHITECTURE");
   if (!processor_architecture)
     Fatal("couldn't determine architecture");
