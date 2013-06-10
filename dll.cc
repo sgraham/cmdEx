@@ -286,6 +286,21 @@ LONG WINAPI HookTrap(EXCEPTION_POINTERS* info) {
   return EXCEPTION_CONTINUE_EXECUTION;
 }
 
+const char* GetKernelDll() {
+  OSVERSIONINFOEX osvi = {0};
+  osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+  osvi.dwMajorVersion = 6;
+  osvi.dwMinorVersion = 2;
+
+  DWORDLONG mask = 0;
+  VER_SET_CONDITION(mask, VER_MAJORVERSION, VER_GREATER_EQUAL);
+  VER_SET_CONDITION(mask, VER_MINORVERSION, VER_GREATER_EQUAL);
+
+  if (VerifyVersionInfo(&osvi, VER_MAJORVERSION | VER_MINORVERSION, mask))
+    return "kernelbase.dll";
+  return "kernel32.dll";
+}
+
 void OnAttach() {
   // Push the modified prompt into the environment. The implementation of $M
   // adds a space for no good reason, so use a $H after it to remove that.
@@ -296,11 +311,11 @@ void OnAttach() {
   // patch the compare from DRIVE_REMOTE to DRIVE_FIXED. Then, restore normal
   // execution of the function, and IAT patch WNetGetConnectionW to point to
   // our git-branch-getter.
-  HMODULE kernel32 = GetModuleHandle("kernel32.dll");
-  if (!kernel32)
+  HMODULE kernel = GetModuleHandle(GetKernelDll());
+  if (!kernel)
     Error("failed to find base for kernel dll");
-  unsigned char* get_drive_type = reinterpret_cast<unsigned char*>(
-      GetProcAddress(kernel32, "GetDriveTypeW"));
+  unsigned char* get_drive_type =
+      reinterpret_cast<unsigned char*>(GetProcAddress(kernel, "GetDriveTypeW"));
   g_hook_trap_addr = get_drive_type;
   g_hook_trap_value = *g_hook_trap_addr;
   g_veh = AddVectoredExceptionHandler(1, HookTrap);
