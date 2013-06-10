@@ -273,6 +273,12 @@ LONG WINAPI HookTrap(EXCEPTION_POINTERS* info) {
   // Patch WNetGetConnectionW's IAT entry.
   void** imp =
       GetImportByName(GetModuleHandle(NULL), NULL, "WNetGetConnectionW");
+  if (!imp) {
+    imp =
+        GetImportByName(GetModuleHandle(NULL), NULL, "WNetGetConnectionWStub");
+  }
+  if (!imp)
+    Error("couldn't get import for WNetGetConnectionW");
   *imp = &GetGitBranch;
 
   FlushInstructionCache(GetCurrentProcess(), 0, 0);

@@ -9,7 +9,8 @@ cmdEx makes some small improvements to cmd.exe. Currently:
 (TODO) - Suppress "Terminate batch job (Y/N)?" prompt.
 
 
-cmdEx is currently only known to work on Windows 7, and only for x86 cmd.exe.
+cmdEx is currently only known to work on Windows 7 and Windows 8, and only when
+using the x86 cmd.exe.
 
 
 Build:
