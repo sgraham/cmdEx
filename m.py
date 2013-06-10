@@ -52,7 +52,10 @@ def Package():
 
 
 def TestInNew():
-  Run(['C:\\Windows\\SysWOW64\\cmd.exe', '/k', 'out\\cmdEx.exe'])
+  prev = os.getcwd()
+  os.chdir('out')  # TODO: This shouldn't be necessary.
+  Run(['C:\\Windows\\SysWOW64\\cmd.exe', '/k', 'cmdEx.exe'])
+  os.chdir(prev)
 
 
 def main():
