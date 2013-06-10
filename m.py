@@ -18,7 +18,7 @@ def Build():
   os.makedirs('out')
   flags = [
       '/nologo',
-      '/Ox',
+      #'/Ox',
       '/Zi',
       '/W4',
       '/Ithird_party/libgit2/include',
