@@ -324,7 +324,7 @@ LONG WINAPI HookTrap(EXCEPTION_POINTERS* info) {
       bytes_at_callsite[4] == 0x85) {
     // Matches cmp eax, 4
     //         jnz ...
-    unsigned char fixed_drive = 3;
+    unsigned char fixed_drive = DRIVE_FIXED;
     WriteMemory(&bytes_at_callsite[2], &fixed_drive, sizeof(fixed_drive));
   }
 
