@@ -31,6 +31,11 @@ C:\...\cmdEx>cmdEx
 [master] C:\...cmdEx>
 
 
+Test:
+
+C:\...\cmdEx>m test
+
+
 
 Similar project, but more wholesale behaviour replacement:
 http://code.google.com/p/clink/. Some of cmdEx's injection code is based on

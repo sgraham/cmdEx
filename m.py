@@ -52,17 +52,19 @@ def Build(release):
 
 
 def TestInNew():
-  prev = os.getcwd()
-  os.chdir('out')  # TODO: This shouldn't be necessary.
-  Run(['C:\\Windows\\SysWOW64\\cmd.exe', '/k', 'cmdEx.exe'])
-  os.chdir(prev)
+  Run(['C:\\Windows\\SysWOW64\\cmd.exe', '/k', 'out\\cmdEx.exe'])
+
+
+def Test():
+  Run([sys.executable, 'test.py'])
 
 
 def main():
   cmds = {
     'debug': lambda: Build(False),
     'release': lambda: Build(True),
-    'testnew': TestInNew,
+    'new': TestInNew,
+    'test': Test,
   }
   if len(sys.argv) < 2:
     return cmds['debug']()

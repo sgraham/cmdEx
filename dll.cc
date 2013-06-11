@@ -126,7 +126,7 @@ DWORD APIENTRY GetGitBranch(
   git_reference* head_ref = NULL;
   if (g_git_repository_head(&head_ref, repo) != 0) {
     // TODO: More useful/fancy here?
-    wcscpy(remote, L"[(no head)]");
+    wcscpy(remote, L"[(no head)] ");
     return NO_ERROR;
   }
 
@@ -170,7 +170,7 @@ DWORD APIENTRY GetGitBranch(
   }
 
   char entire[_MAX_PATH];
-  sprintf(entire, "[%s%s]", name, extra);
+  sprintf(entire, "[%s%s] ", name, extra);
 
   // Not sure if this is ACP or UTF-8.
   MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, entire, -1, remote, *length);
@@ -370,8 +370,8 @@ const char* GetKernelDll() {
 
 void OnAttach(HMODULE self) {
   // Push the modified prompt into the environment. The implementation of $M
-  // adds a space for no particularly good reason, so don't add another.
-  _putenv("PROMPT=$M$P$G");
+  // adds a space for no particularly good reason, so remove it with a $H.
+  _putenv("PROMPT=$M$H$P$G");
 
   LoadGit2FunctionPointers(self);
 
