@@ -38,6 +38,8 @@ class Test(object):
     with tempfile.NamedTemporaryFile(suffix='.bat', delete=False) as bat:
       bat.write(CMD_EX_PATH + '\n')
       for command in commands:
+        if command.startswith('git '):
+          command = 'call ' + command
         bat.write(command + '\n')
       bat.write('echo.\n')
     env = os.environ.copy()
@@ -47,22 +49,30 @@ class Test(object):
       stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
       env=env, cwd=self.temp_dir)
     out, _ = popen.communicate()
+    os.unlink(bat.name)
     lines = out.splitlines()
     # Ignore the first two respones, they're cmdEx being installed and running
     # the first command (which will contain a $P which we don't want).
     lines = [line for i, line in enumerate(lines) if i % 2 == 1]
     assert lines[0].startswith('###')
     lines = lines[2:]
+    def fail(msg):
+      print 'FAILED', msg
+      print 'commands:', commands
+      print 'expect:', expect
+      print 'lines:', lines
+      print ''
+      Test.tests_failed_ += 1
+    if len(lines) != len(expect):
+      fail('length of output and expected don\'t match')
+      return
     for line, (i, exp) in zip(lines, enumerate(expect)):
       if not exp:
         continue
       if i == len(expect) - 1:
         exp = exp + 'echo.'
       if line != exp:
-        print 'FAILED', line, exp
-        print 'commands:', commands
-        print 'expect:', expect
-        Test.tests_failed_ += 1
+        fail(line + ' vs. ' + exp)
         return
     Test.tests_passed_ += 1
 
@@ -96,13 +106,13 @@ def TestBasic():
           'prompt $M#',
           'echo. > a_file',
           'git add a_file',
-          'git commit -m "yolo"',
+          'git commit -m "yolo" -q',
         ],
         expect=[
           '',
           '',
           '',
-          '[(master)]  #',
+          '[master]  #',
         ])
 
 
