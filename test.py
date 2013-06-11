@@ -15,7 +15,7 @@ CMD_EX_PATH = \
 def Run(args, quiet=False):
   stdout = None
   if quiet:
-    stdout = open('os.devnull', 'w')
+    stdout = open(os.devnull, 'w')
   subprocess.check_call(args, shell=True, stdout=stdout)
 
 
@@ -27,7 +27,8 @@ class Test(object):
   tests_passed_ = 0
   tests_failed_ = 0
 
-  def __init__(self, init=True):
+  def __init__(self, name, init=True):
+    self.name = name
     self.orig_dir = os.getcwd()
     self.temp_dir = tempfile.mkdtemp()
     os.chdir(self.temp_dir)
@@ -57,7 +58,7 @@ class Test(object):
     assert lines[0].startswith('###')
     lines = lines[2:]
     def fail(msg):
-      print 'FAILED', msg
+      print 'FAILED', self.name, msg
       print 'commands:', commands
       print 'expect:', expect
       print 'lines:', lines
@@ -67,13 +68,16 @@ class Test(object):
       fail('length of output and expected don\'t match')
       return
     for line, (i, exp) in zip(lines, enumerate(expect)):
-      if not exp:
+      if exp is None:
         continue
-      if i == len(expect) - 1:
-        exp = exp + 'echo.'
+      if '#' in line:
+        line = line[:line.index('#')]
+      if '#' in exp:
+        exp = exp[:exp.index('#')]
       if line != exp:
-        fail(line + ' vs. ' + exp)
+        fail("'%s' vs '%s'" % (line, exp))
         return
+    print 'ok - ' + self.name
     Test.tests_passed_ += 1
 
   def __enter__(self):
@@ -90,34 +94,70 @@ class Test(object):
     print '%d/%d passed.' % (Test.tests_passed_, Test.tests_started_)
 
 
-def TestBasic():
-  with Test() as t:
-    t.Interact(
-        commands=[
-          'prompt $M#',
-        ],
-        expect=[
-          '[(no head)]  #',
-        ])
-
-  with Test() as t:
-    t.Interact(
-        commands=[
-          'prompt $M#',
-          'echo. > a_file',
-          'git add a_file',
-          'git commit -m "yolo" -q',
-        ],
-        expect=[
-          '',
-          '',
-          '',
-          '[master]  #',
-        ])
+def Interact(name, commands, expect):
+  with Test(name) as t:
+    t.Interact(commands, expect)
 
 
 def main():
-  TestBasic()
+  Interact(
+      'before initial commit',
+      commands=[
+        'prompt $M#',
+      ],
+      expect=[
+        '[(no head)]  #',
+      ])
+
+  Interact(
+      'single commit on master',
+      commands=[
+        'prompt $M#',
+        'echo. > a_file',
+        'git add a_file',
+        'git commit -m "yolo" -q',
+      ],
+      expect=[
+        None,
+        None,
+        None,
+        '[master]  #',
+      ])
+
+  Interact(
+      'detached head',
+      commands=[
+        'prompt $M#',
+        'echo. > a_file',
+        'git add a_file',
+        'git commit -m "yolo" -q',
+        'echo. >> a_file',
+        'git commit -am "two" -q',
+        'git checkout HEAD~1 -q',
+      ],
+      expect=[
+        None,
+        None,
+        None,
+        None,
+        None,
+        '[master]  #',
+        # TODO: We want this to be something like "[e24b9395...]  " but it's
+        # a bit tricky to automate given our setup (because there's times in
+        # the hashes, e.g.). Also, it's not actually implemented yet.
+        None,
+      ])
+
+  Interact(
+      'prompt completely empty if not in working dir',
+      commands=[
+        'prompt $M#',
+        'cd ..',
+      ],
+      expect=[
+        None,
+        ' ',
+      ])
   Test.Report()
 
 
