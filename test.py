@@ -87,6 +87,7 @@ class Test(object):
   def __exit__(self, type, value, traceback):
     os.chdir(self.orig_dir)
     Run(['rmdir', '/s', '/q', self.temp_dir])
+    #print self.temp_dir
 
   @staticmethod
   def Report():
@@ -125,6 +126,17 @@ def main():
       ])
 
   Interact(
+      'prompt completely empty if not in working dir',
+      commands=[
+        'prompt $M#',
+        'cd ..',
+      ],
+      expect=[
+        None,
+        ' ',
+      ])
+
+  Interact(
       'detached head',
       commands=[
         'prompt $M#',
@@ -148,16 +160,9 @@ def main():
         None,
       ])
 
-  Interact(
-      'prompt completely empty if not in working dir',
-      commands=[
-        'prompt $M#',
-        'cd ..',
-      ],
-      expect=[
-        None,
-        ' ',
-      ])
+  # TODO: Set up some repos and check them in (somehow), then xcopy to temp
+  # dir and operate on them for tests to get stable hashes.
+
   Test.Report()
 
 

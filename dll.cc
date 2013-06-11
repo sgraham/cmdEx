@@ -19,9 +19,13 @@ namespace {
 #define GIT2_FUNCTIONS \
   X(git_branch_name) \
   X(git_reference_free) \
+  X(git_reference_name) \
+  X(git_reference_name_to_id) \
+  X(git_reference_shorthand) \
   X(git_repository_discover) \
   X(git_repository_head) \
-  X(git_repository_open)
+  X(git_repository_open) \
+  X(git_oid_tostr) \
 
 #define X(name) decltype(name)* g_ ## name;
 GIT2_FUNCTIONS
@@ -163,10 +167,18 @@ DWORD APIENTRY GetGitBranch(
     strcpy(extra, "|BISECTING");
   } else {
     const char* head_name = "";
-    if (g_git_branch_name(&head_name, head_ref) != 0)
-      strcpy(name, "(no branch)");
-    else
+    if (g_git_branch_name(&head_name, head_ref) != 0) {
+      git_oid oid;
+      if (g_git_reference_name_to_id(&oid, repo, "HEAD") == 0) {
+        char truncated[8];
+        strcpy(name, g_git_oid_tostr(truncated, sizeof(truncated), &oid));
+        strcat(name, "...");
+      } else {
+        strcpy(name, "(unknown)");
+      }
+    } else {
       strcpy(name, head_name);
+    }
   }
 
   char entire[_MAX_PATH];
