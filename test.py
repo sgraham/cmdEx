@@ -3,13 +3,14 @@
 # found in the LICENSE file.
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 
 
-CMD_EX_PATH = \
-    os.path.abspath(os.path.join(os.path.dirname(__file__), 'out\\cmdEx.exe'))
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+CMD_EX_PATH = os.path.join(BASE_DIR, 'out\\cmdEx.exe')
 
 
 def Run(args, quiet=False):
@@ -27,22 +28,25 @@ class Test(object):
   tests_passed_ = 0
   tests_failed_ = 0
 
-  def __init__(self, name, init=True):
+  def __init__(self, name, repo='empty'):
     self.name = name
     self.orig_dir = os.getcwd()
     self.temp_dir = tempfile.mkdtemp()
     os.chdir(self.temp_dir)
-    if init:
-      Run(['git', 'init'], quiet=True)
+    if repo:
+      shutil.copytree(os.path.join(BASE_DIR, 'test_repos', repo, '_git'),
+                      os.path.join(self.temp_dir, '.git'))
 
   def Interact(self, commands, expect):
+    # depot_tools does some wacky wrapping, so we need to spawn 'git' in a
+    # separate sub-shell.
+    commands = ['%COMSPEC% /c ' + c if c.startswith('git ') else c
+                for c in commands]
     with tempfile.NamedTemporaryFile(suffix='.bat', delete=False) as bat:
       bat.write(CMD_EX_PATH + '\n')
       for command in commands:
-        if command.startswith('git '):
-          command = 'call ' + command
         bat.write(command + '\n')
-      bat.write('echo.\n')
+      bat.write('ver > nul\n')
     env = os.environ.copy()
     env['PROMPT'] = '###'
     popen = subprocess.Popen([
@@ -51,23 +55,23 @@ class Test(object):
       env=env, cwd=self.temp_dir)
     out, _ = popen.communicate()
     os.unlink(bat.name)
-    lines = out.splitlines()
+    outlines = out.splitlines()
     # Ignore the first two respones, they're cmdEx being installed and running
     # the first command (which will contain a $P which we don't want).
-    lines = [line for i, line in enumerate(lines) if i % 2 == 1]
-    assert lines[0].startswith('###')
-    lines = lines[2:]
+    outlines = [line for i, line in enumerate(outlines) if i % 2 == 1]
+    assert outlines[0].startswith('###')
+    outlines = outlines[2:]
     def fail(msg):
-      print 'FAILED', self.name, msg
+      print 'FAILED', self.name, '->', msg
       print 'commands:', commands
       print 'expect:', expect
-      print 'lines:', lines
+      print 'outlines:', outlines
       print ''
       Test.tests_failed_ += 1
-    if len(lines) != len(expect):
+    if len(outlines) != len(expect):
       fail('length of output and expected don\'t match')
       return
-    for line, (i, exp) in zip(lines, enumerate(expect)):
+    for line, (i, exp) in zip(outlines, enumerate(expect)):
       if exp is None:
         continue
       if '#' in line:
@@ -87,7 +91,6 @@ class Test(object):
   def __exit__(self, type, value, traceback):
     os.chdir(self.orig_dir)
     Run(['rmdir', '/s', '/q', self.temp_dir])
-    #print self.temp_dir
 
   @staticmethod
   def Report():
@@ -95,14 +98,15 @@ class Test(object):
     print '%d/%d passed.' % (Test.tests_passed_, Test.tests_started_)
 
 
-def Interact(name, commands, expect):
-  with Test(name) as t:
+def Interact(name, repo, commands, expect):
+  with Test(name, repo) as t:
     t.Interact(commands, expect)
 
 
 def main():
   Interact(
       'before initial commit',
+      'empty',
       commands=[
         'prompt $M#',
       ],
@@ -112,21 +116,17 @@ def main():
 
   Interact(
       'single commit on master',
+      'single_commit',
       commands=[
         'prompt $M#',
-        'echo. > a_file',
-        'git add a_file',
-        'git commit -m "yolo" -q',
       ],
       expect=[
-        None,
-        None,
-        None,
         '[master]  #',
       ])
 
   Interact(
       'prompt completely empty if not in working dir',
+      'empty',
       commands=[
         'prompt $M#',
         'cd ..',
@@ -138,30 +138,15 @@ def main():
 
   Interact(
       'detached head',
+      'four_linear_commits',
       commands=[
         'prompt $M#',
-        'echo. > a_file',
-        'git add a_file',
-        'git commit -m "yolo" -q',
-        'echo. >> a_file',
-        'git commit -am "two" -q',
-        'git checkout HEAD~1 -q',
+        'git checkout HEAD~2 >nul 2>nul',
       ],
       expect=[
-        None,
-        None,
-        None,
-        None,
-        None,
         '[master]  #',
-        # TODO: We want this to be something like "[e24b9395...]  " but it's
-        # a bit tricky to automate given our setup (because there's times in
-        # the hashes, e.g.). Also, it's not actually implemented yet.
-        None,
+        '[7b4f1ae...]  #',
       ])
-
-  # TODO: Set up some repos and check them in (somehow), then xcopy to temp
-  # dir and operate on them for tests to get stable hashes.
 
   Test.Report()
 
