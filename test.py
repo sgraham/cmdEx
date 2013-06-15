@@ -55,12 +55,10 @@ class Test(object):
       stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
       env=env, cwd=self.temp_dir)
     out, _ = popen.communicate()
-    #os.unlink(bat.name)
-    print bat.name
+    os.unlink(bat.name)
     outlines = out.splitlines()
     # Ignore the first two respones, they're cmdEx being installed and running
     # the first command (which will contain a $P which we don't want).
-    print outlines
     outlines = [line for i, line in enumerate(outlines) if i % 2 == 1]
     assert outlines[0].startswith('###')
     outlines = outlines[2:]
@@ -93,8 +91,7 @@ class Test(object):
 
   def __exit__(self, type, value, traceback):
     os.chdir(self.orig_dir)
-    #Run(['rmdir', '/s', '/q', self.temp_dir])
-    print self.temp_dir
+    Run(['rmdir', '/s', '/q', self.temp_dir])
 
   @staticmethod
   def Report():

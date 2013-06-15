@@ -4,7 +4,7 @@
 @echo off
 setlocal
 
-::if exist C:\Python27_amd64\python.exe goto :x64
+if exist C:\Python27_amd64\python.exe goto :x64
 
 call python m.py %*
 goto :eof
