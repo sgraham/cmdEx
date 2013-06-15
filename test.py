@@ -26,6 +26,7 @@ class Test(object):
   tests_started_ = 0
   tests_passed_ = 0
   tests_failed_ = 0
+  cmd_binary_ = None
 
   def __init__(self, name, init=True):
     self.name = name
@@ -46,7 +47,7 @@ class Test(object):
     env = os.environ.copy()
     env['PROMPT'] = '###'
     popen = subprocess.Popen([
-        'C:\\Windows\\SysWOW64\\cmd.exe', '/c', bat.name],
+        Test.cmd_binary_, '/c', bat.name],
       stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
       env=env, cwd=self.temp_dir)
     out, _ = popen.communicate()
@@ -94,13 +95,18 @@ class Test(object):
     assert Test.tests_started_ == Test.tests_passed_ + Test.tests_failed_
     print '%d/%d passed.' % (Test.tests_passed_, Test.tests_started_)
 
+  @staticmethod
+  def SetCmdBinary(binary):
+    Test.cmd_binary_ = binary
+
 
 def Interact(name, commands, expect):
   with Test(name) as t:
     t.Interact(commands, expect)
 
 
-def main():
+def DoTests(cmd_binary):
+  Test.SetCmdBinary(cmd_binary)
   Interact(
       'before initial commit',
       commands=[
@@ -160,9 +166,16 @@ def main():
         None,
       ])
 
-  # TODO: Set up some repos and check them in (somehow), then xcopy to temp
-  # dir and operate on them for tests to get stable hashes.
 
+def main():
+  print 'x86:'
+  DoTests('C:\\Windows\\SysWOW64\\cmd.exe')
+  isx64python = sys.maxsize > 2**32
+  if isx64python:
+    print 'x64:'
+    DoTests('C:\\Windows\\System32\\cmd.exe')
+  else:
+    print 'not running on x64 python, can\'t test x64 cmd.'
   Test.Report()
 
 

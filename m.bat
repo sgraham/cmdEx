@@ -3,4 +3,12 @@
 :: found in the LICENSE file.
 @echo off
 setlocal
-python m.py %*
+
+if exist C:\Python27_amd64\python.exe goto :x64
+
+call python m.py %*
+goto :eof
+
+:x64
+call C:\Python27_amd64\python.exe m.py %*
+goto :eof
