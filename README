@@ -13,6 +13,7 @@ Possible future features? (Not implemented)
 - Improve tab completion (maybe override dir completion?)
   - git commands
   - git branch completion
+- Alt-Up == "cd .."
 
 
 cmdEx is currently only known to work on Windows 7 and Windows 8, and only when
