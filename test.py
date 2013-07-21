@@ -29,14 +29,15 @@ class Test(object):
   tests_failed_ = 0
   cmd_binary_ = None
 
-  def __init__(self, name, repo='empty'):
+  def __init__(self, name, repo):
     self.name = name
     self.orig_dir = os.getcwd()
     self.temp_dir = tempfile.mkdtemp()
-    os.chdir(self.temp_dir)
-    if repo:
-      shutil.copytree(os.path.join(BASE_DIR, 'test_repos', repo, '_git'),
-                      os.path.join(self.temp_dir, '.git'))
+    shutil.copytree(os.path.join(BASE_DIR, 'test_repos', repo),
+                    os.path.join(self.temp_dir, repo))
+    os.rename(os.path.join(self.temp_dir, repo, '_git'),
+              os.path.join(self.temp_dir, repo, '.git'))
+    os.chdir(os.path.join(self.temp_dir, repo))
 
   def Interact(self, commands, expect):
     # depot_tools does some wacky wrapping, so we need to spawn 'git' in a
@@ -47,13 +48,12 @@ class Test(object):
       bat.write(CMD_EX_PATH + '\n')
       for command in commands:
         bat.write(command + '\n')
-      bat.write('ver > nul\n')
+      bat.write('ver >nul\n')
     env = os.environ.copy()
     env['PROMPT'] = '###'
     popen = subprocess.Popen([
         Test.cmd_binary_, '/c', bat.name],
-      stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-      env=env, cwd=self.temp_dir)
+      stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)
     out, _ = popen.communicate()
     os.unlink(bat.name)
     outlines = out.splitlines()
@@ -91,7 +91,7 @@ class Test(object):
 
   def __exit__(self, type, value, traceback):
     os.chdir(self.orig_dir)
-    Run(['rmdir', '/s', '/q', self.temp_dir])
+    #Run(['rmdir', '/s', '/q', self.temp_dir])
 
   @staticmethod
   def Report():
@@ -152,6 +152,18 @@ def DoTests(cmd_binary):
       expect=[
         '[master]  #',
         '[7b4f1ae...]  #',
+      ])
+
+  Interact(
+      'rebase in progress',
+      'conflict_rebase',
+      commands=[
+        'prompt $M#',
+        'git rebase master >nul 2>nul',
+      ],
+      expect=[
+        '[child]  #',
+        '[child 1/1|REBASE]  #',
       ])
 
 

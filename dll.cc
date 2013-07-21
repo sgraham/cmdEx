@@ -103,8 +103,17 @@ void LoadGit2FunctionPointers(HMODULE self) {
 #undef X
 }
 
+void TrimRefsHead(char* head) {
+  const char* prefix = "refs/heads/";
+  const size_t length = strlen(prefix);
+  if (strncmp(head, prefix, length) == 0)
+    memmove(head, &head[length], strlen(&head[length]) + 1);
+}
+
 // Replacement for WNetGetConnectionW that gets the git branch for the
 // specified local path instead.
+// Somewhat based on:
+// https://github.com/git/git/blob/master/contrib/completion/git-prompt.sh
 DWORD APIENTRY GetGitBranch(
     const wchar_t*,  // This is only the drive, not the directory.
     wchar_t* remote,
@@ -139,6 +148,7 @@ DWORD APIENTRY GetGitBranch(
 
   if (IsDirectory(JoinPath(git_dir, "rebase-merge"))) {
     ReadInto(JoinPath(git_dir, "rebase-merge/head-name"), name);
+    TrimRefsHead(name);
     char step[_MAX_PATH], total[_MAX_PATH];
     ReadInto(JoinPath(git_dir, "rebase-merge/msgnum"), step);
     ReadInto(JoinPath(git_dir, "rebase-merge/end"), total);
@@ -150,6 +160,7 @@ DWORD APIENTRY GetGitBranch(
     const char* suffix = "";
     if (IsFile(JoinPath(git_dir, "rebase-apply/rebasing"))) {
       ReadInto(JoinPath(git_dir, "rebase-apply/head-name"), name);
+      TrimRefsHead(name);
       suffix = "|REBASE";
     } else if (IsFile(JoinPath(git_dir, "rebase-apply/applying"))) {
       suffix = "|AM";
