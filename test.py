@@ -80,7 +80,7 @@ class Test(object):
       if '#' in exp:
         exp = exp[:exp.index('#')]
       if line != exp:
-        fail("'%s' vs '%s'" % (line, exp))
+        fail("got '%s' vs expected '%s'" % (line, exp))
         return
     print 'ok - ' + self.name
     Test.tests_passed_ += 1
