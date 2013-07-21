@@ -7,5 +7,7 @@
 CMDEX_X86_EXE RCDATA "out\\cmdEx_x86.exe"
 CMDEX_DLL_X86_DLL RCDATA "out\\cmdEx_dll_x86.dll"
 GIT2_X86_DLL RCDATA "third_party\\libgit2\\Release\\git2.dll"
+DBGHELP_X86_DLL RCDATA "third_party\\dbghelp\\dbghelp.dll"
+SYMSRV_X86_DLL RCDATA "third_party\\dbghelp\\symsrv.dll"
 
 // TODO: x64 resources.

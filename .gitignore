@@ -2,7 +2,7 @@
 *.pdb
 *.obj
 *.res
-third_party/
+third_party/libgit2
 tags
 csearchindex
 downstreamstore

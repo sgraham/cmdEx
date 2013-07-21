@@ -4,6 +4,7 @@
 
 #include <windows.h>
 #include <DelayImp.h>
+#include <DbgHelp.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -17,6 +18,7 @@
 
 #define GIT2_FUNCTIONS \
   X(git_branch_name) \
+  X(git_oid_tostr) \
   X(git_reference_free) \
   X(git_reference_name) \
   X(git_reference_name_to_id) \
@@ -24,10 +26,20 @@
   X(git_repository_discover) \
   X(git_repository_head) \
   X(git_repository_open) \
-  X(git_oid_tostr) \
+
+
+#define DBGHELP_FUNCTIONS \
+  X(SymCleanup) \
+  X(SymFromName) \
+  X(SymInitialize) \
+  X(SymLoadModule64) \
+  X(SymSetOptions) \
+  X(SymSetSearchPath) \
+
 
 #define X(name) decltype(name)* g_ ## name;
 GIT2_FUNCTIONS
+DBGHELP_FUNCTIONS
 #undef X
 
 // Another way to do this would be to hook ReadConsoleW and when cmd is
@@ -79,23 +91,41 @@ void ReadInto(const std::string& path, char* buffer) {
   }
 }
 
-// We are in cmd's directory, so loading git2.dll (delayed or otherwise) may
-// fail. Instead, LoadLibrary and GetProcAddress the functions we need from
-// the same directory as our dll is in.
-void LoadGit2FunctionPointers(HMODULE self) {
+HMODULE LoadLibraryInSameLocation(HMODULE self, const char* dll_name) {
   char module_location[_MAX_PATH];
   GetModuleFileName(self, module_location, sizeof(module_location));
   char* slash = strrchr(module_location, '\\');
   if (!slash) {
     Error("couldn't find self location");
-    return;
+    return NULL;
   }
   *slash = 0;
-  strcat(module_location, "\\git2.dll");
-  HMODULE git2 = LoadLibrary(module_location);
+  strcat(module_location, "\\");
+  strcat(module_location, dll_name);
+  return LoadLibrary(module_location);
+}
+
+// We are in cmd's directory, so loading git2.dll (delayed or otherwise) may
+// fail. Instead, LoadLibrary and GetProcAddress the functions we need from
+// the same directory as our dll is in.
+void LoadGit2FunctionPointers(HMODULE self) {
+  HMODULE git2 = LoadLibraryInSameLocation(self, "git2.dll");
+  if (!git2)
+    return;
 #define X(name) \
   g_##name = reinterpret_cast<decltype(name)*>(GetProcAddress(git2, #name));
   GIT2_FUNCTIONS
+#undef X
+}
+
+// TODO: I'm not sure this works for symsrv as it's lazily loaded by dbghelp.
+void LoadDbgHelpFunctionPointers(HMODULE self) {
+  HMODULE dbghelp = LoadLibraryInSameLocation(self, "dbghelp.dll");
+  if (!dbghelp)
+    return;
+#define X(name) \
+  g_##name = reinterpret_cast<decltype(name)*>(GetProcAddress(dbghelp, #name));
+  DBGHELP_FUNCTIONS
 #undef X
 }
 
@@ -325,6 +355,98 @@ void WriteMemory(void* addr, const void* src, size_t bytes) {
   }
 }
 
+void PatchTerminateBatchJobPrompt() {
+  // Ctrl-C during a batch file looks like:
+  //
+  // CtrlCAbort:
+  //   ... some stuff ...
+  //   push 2328h
+  //   push 237bh
+  //   push 0
+  //   call PromptUser
+  //   cmp eax, 1
+  //   ... if PromptUser returns 1, then terminate ...
+  //
+  // So, we need to find the location for _CtrlCAbort@0, and replace the pushes
+  // and call with nops and mov eax, 1. This avoids both the printing of the
+  // prompt and also the need to answer 'y'.
+  //
+  // CtrlCAbort is not an exported function, so we pull down cmd's pdb with
+  // DbgHelp/SymSrv to get its address, and then find the push+call to patch.
+
+  Log("downloading pdb to patch Ctrl-C, might take a while the first time...");
+
+  g_SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_DEBUG);
+  HANDLE process = GetCurrentProcess();
+
+  char temp_path[1024];
+  if (!GetTempPath(sizeof(temp_path), temp_path)) {
+    Log("couldn't GetTempPath");
+    return;
+  }
+
+  g_SymInitialize(process, NULL, FALSE);
+  char search_path[_MAX_PATH];
+  sprintf(search_path, "SRV*%s*http://msdl.microsoft.com/download/symbols",
+      temp_path);
+  g_SymSetSearchPath(process, search_path);
+
+  char module_location[_MAX_PATH];
+  HMODULE self = GetModuleHandle(NULL);
+  GetModuleFileName(self, module_location, sizeof(module_location));
+  DWORD64 base_address =
+      g_SymLoadModule64(process, NULL, module_location, NULL, 0, 0);
+  if (base_address == 0) {
+    Log("SymLoadModule64 failed: %d", GetLastError());
+    g_SymCleanup(process);
+    return;
+  }
+
+  char symbol_name[MAX_SYM_NAME];
+  ULONG64 buffer[(sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR) +
+                  sizeof(ULONG64) - 1) /
+                 sizeof(ULONG64)];
+  strcpy(symbol_name, "CtrlCAbort");
+  PSYMBOL_INFO symbol = reinterpret_cast<PSYMBOL_INFO>(buffer);
+  symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+  symbol->MaxNameLen = MAX_SYM_NAME;
+  if (g_SymFromName(process, symbol_name, symbol)) {
+    DWORD64 offset_from_base = symbol->Address - symbol->ModBase;
+    DWORD64 relative_to_cmd =
+        reinterpret_cast<DWORD64>(self) + offset_from_base;
+    Log("CtrlCAbort is at: %p", relative_to_cmd);
+    // Search up to 100 bytes for the thing we want to patch (it should be
+    // only a few away from the beginning of the function).
+    unsigned char* code_mem = reinterpret_cast<unsigned char*>(relative_to_cmd);
+    for (int i = 0; i < 100; ++i) {
+      if ((code_mem[i + 0] == 0x68 && code_mem[i + 1] == 0x28 &&
+           code_mem[i + 2] == 0x23 && code_mem[i + 3] == 0x00 &&
+           code_mem[i + 4] == 0x00) &&  // push 2328h
+          (code_mem[i + 5] == 0x68 && code_mem[i + 6] == 0x7b &&
+           code_mem[i + 7] == 0x23 && code_mem[i + 8] == 0x00 &&
+           code_mem[i + 9] == 0x00) &&  // push 237bh
+          (code_mem[i + 10] == 0x6a && code_mem[i + 11] == 0x00) &&  // push 0
+          (code_mem[i + 12] == 0xe8)  // call PromptUser (w/o offset)
+          ) {
+        unsigned char replace_with[17] = {
+          0x90, 0x90, 0x90, 0x90, 0x90,  // first push
+          0x90, 0x90, 0x90, 0x90, 0x90,  // second push
+          0x90, 0x90,                    // third push
+          0xb8, 0x01, 0x00, 0x00, 0x00,  // call, replace with mov eax, 1
+        };
+        WriteMemory(&code_mem[i], replace_with, sizeof(replace_with));
+        break;
+      }
+    }
+  } else {
+    Log("SymFromName failed: %d", GetLastError());
+    g_SymCleanup(process);
+    return;
+  }
+
+  g_SymCleanup(process);
+}
+
 void* g_veh;
 unsigned char* g_hook_trap_addr;
 unsigned char g_hook_trap_value;
@@ -371,7 +493,8 @@ LONG WINAPI HookTrap(EXCEPTION_POINTERS* info) {
   void* func_addr = GetGitBranch;
   WriteMemory(imp, &func_addr, sizeof(imp));
 
-  // Patch ReadConsoleW in the same way. TODO: Might need JMP patch for Win7?
+  // Patch ReadConsoleW in the same way. This is currently unused, but we'll
+  // need it to improve directory completion.
   imp = GetImportByName(GetModuleHandle(NULL), NULL, "ReadConsoleW");
   if (!imp)
     imp = GetImportByName(GetModuleHandle(NULL), NULL, "ReadConsoleWStub");
@@ -379,6 +502,9 @@ LONG WINAPI HookTrap(EXCEPTION_POINTERS* info) {
     Error("couldn't get import for ReadConsoleW");
   func_addr = ReadConsoleReplacement;
   WriteMemory(imp, &func_addr, sizeof(imp));
+
+  // Patch "Terminate?" prompt code.
+  PatchTerminateBatchJobPrompt();
 
   FlushInstructionCache(GetCurrentProcess(), 0, 0);
 
@@ -412,6 +538,7 @@ void OnAttach(HMODULE self) {
   _putenv("PROMPT=$M$H$P$G");
 
   LoadGit2FunctionPointers(self);
+  LoadDbgHelpFunctionPointers(self);
 
   // Trap in GetDriveTypeW (this guards the call to WNetGetConnectionW we want
   // to override). When it's next called and it matches the callsite we want,

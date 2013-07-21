@@ -121,6 +121,8 @@ int main() {
       ExtractFileResource(CMDEX_X86_EXE, "cmdEx_x86.exe");
       ExtractFileResource(CMDEX_DLL_X86_DLL, "cmdEx_dll_x86.dll");
       ExtractFileResource(GIT2_X86_DLL, "git2.dll");
+      ExtractFileResource(DBGHELP_X86_DLL, "dbghelp.dll");
+      ExtractFileResource(SYMSRV_X86_DLL, "symsrv.dll");
       sprintf(buf, "cmdEx_x86.exe %d", parent_pid);
       return system(buf);
     } else {
