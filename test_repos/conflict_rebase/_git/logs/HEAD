@@ -1,0 +1,8 @@
+0000000000000000000000000000000000000000 4773b88416ef5e51ada321eeab0117527e580004 Scott Graham <scottmg@chromium.org> 1374375235 -0700	commit (initial): initial commit
+4773b88416ef5e51ada321eeab0117527e580004 4773b88416ef5e51ada321eeab0117527e580004 Scott Graham <scottmg@chromium.org> 1374375275 -0700	checkout: moving from master to child
+4773b88416ef5e51ada321eeab0117527e580004 aa1bab5a4fd1a72b125092ef1f677c4fe36bb485 Scott Graham <scottmg@chromium.org> 1374375301 -0700	commit: change in child
+aa1bab5a4fd1a72b125092ef1f677c4fe36bb485 4773b88416ef5e51ada321eeab0117527e580004 Scott Graham <scottmg@chromium.org> 1374375305 -0700	checkout: moving from child to master
+4773b88416ef5e51ada321eeab0117527e580004 8375d6dfc8740e050f4f1e27d5046338ec90c07f Scott Graham <scottmg@chromium.org> 1374375318 -0700	commit: change in master
+8375d6dfc8740e050f4f1e27d5046338ec90c07f aa1bab5a4fd1a72b125092ef1f677c4fe36bb485 Scott Graham <scottmg@chromium.org> 1374375319 -0700	checkout: moving from master to child
+aa1bab5a4fd1a72b125092ef1f677c4fe36bb485 8375d6dfc8740e050f4f1e27d5046338ec90c07f Scott Graham <scottmg@chromium.org> 1374375371 -0700	checkout: moving from child to 8375d6dfc8740e050f4f1e27d5046338ec90c07f^0
+8375d6dfc8740e050f4f1e27d5046338ec90c07f aa1bab5a4fd1a72b125092ef1f677c4fe36bb485 Scott Graham <scottmg@chromium.org> 1374375384 -0700	rebase: aborting
