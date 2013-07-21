@@ -20,6 +20,11 @@ def Run(args, quiet=False):
   subprocess.check_call(args, shell=True, stdout=stdout)
 
 
+def EnsureDirExists(dir_name):
+  if not os.path.exists(dir_name):
+    os.makedirs(dir_name)
+
+
 class Test(object):
   """Creates a temporary directory, initializes a git repo there, and starts
   cmdEx in that directory."""
@@ -37,6 +42,12 @@ class Test(object):
                     os.path.join(self.temp_dir, repo))
     os.rename(os.path.join(self.temp_dir, repo, '_git'),
               os.path.join(self.temp_dir, repo, '.git'))
+    # The empty repo won't have a refs/heads dir, because, ironically git
+    # can't store empty dirs but relies on the existence of .git/refs/heads to
+    # determine if it's in a no-initial-commit repo. So, make that dir if it
+    # doesn't exist.
+    EnsureDirExists(os.path.join(self.temp_dir, repo, '.git', 'refs', 'heads'))
+    EnsureDirExists(os.path.join(self.temp_dir, repo, '.git', 'objects'))
     os.chdir(os.path.join(self.temp_dir, repo))
 
   def Interact(self, commands, expect):
@@ -91,7 +102,7 @@ class Test(object):
 
   def __exit__(self, type, value, traceback):
     os.chdir(self.orig_dir)
-    #Run(['rmdir', '/s', '/q', self.temp_dir])
+    Run(['rmdir', '/s', '/q', self.temp_dir])
 
   @staticmethod
   def Report():
