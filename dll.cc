@@ -42,23 +42,6 @@ GIT2_FUNCTIONS
 DBGHELP_FUNCTIONS
 #undef X
 
-// Another way to do this would be to hook ReadConsoleW and when cmd is
-// requesting 1 character at a time, and the most recent prompt was the
-// "Terminate?" then auto-send a 'y'. Might need to hook WriteConsoleW too to
-// track the output? Or possibly just read from the console directly behind
-// the cursor is enough. Will need to hook ReadConsoleW for improving tab
-// completion anyway.
-/*
-// Replaces PromptUser, and doesn't do "Terminate batch job (Y/N)?" (assumes
-// always 'y').
-int __stdcall ReplacementPromptUser(const wchar_t* a1, DWORD a2, DWORD a3) {
-  if (a2 == 0x237b && a3 == 0x2328) {
-    return 1;
-  }
-  return PromptUser(a1, a2, a3);
-}
-*/
-
 bool IsDirectory(const std::string& path) {
   struct _stat buffer;
   return _stat(path.c_str(), &buffer) == 0 && (buffer.st_mode & _S_IFDIR);
@@ -426,7 +409,7 @@ void PatchTerminateBatchJobPrompt() {
            code_mem[i + 7] == 0x23 && code_mem[i + 8] == 0x00 &&
            code_mem[i + 9] == 0x00) &&  // push 237bh
           (code_mem[i + 10] == 0x6a && code_mem[i + 11] == 0x00) &&  // push 0
-          (code_mem[i + 12] == 0xe8)  // call PromptUser (w/o offset)
+          (code_mem[i + 12] == 0xe8)  // call PromptUser (w/o target address)
           ) {
         unsigned char replace_with[17] = {
           0x90, 0x90, 0x90, 0x90, 0x90,  // first push

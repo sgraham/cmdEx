@@ -2,11 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import ctypes
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -50,7 +52,7 @@ class Test(object):
     EnsureDirExists(os.path.join(self.temp_dir, repo, '.git', 'objects'))
     os.chdir(os.path.join(self.temp_dir, repo))
 
-  def Interact(self, commands, expect):
+  def Interact(self, commands, expect, callback_before_communicate):
     # depot_tools does some wacky wrapping, so we need to spawn 'git' in a
     # separate sub-shell.
     commands = ['%COMSPEC% /c ' + c if c.startswith('git ') else c
@@ -62,9 +64,12 @@ class Test(object):
       bat.write('ver >nul\n')
     env = os.environ.copy()
     env['PROMPT'] = '###'
-    popen = subprocess.Popen([
-        Test.cmd_binary_, '/c', bat.name],
-      stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)
+    popen = subprocess.Popen([Test.cmd_binary_, '/c', bat.name],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             env=env)
+    if callback_before_communicate:
+      callback_before_communicate(popen)
     out, _ = popen.communicate()
     os.unlink(bat.name)
     outlines = out.splitlines()
@@ -114,13 +119,12 @@ class Test(object):
     Test.cmd_binary_ = binary
 
 
-def Interact(name, repo, commands, expect):
+def Interact(name, repo, commands, expect, callback_before_communicate=None):
   with Test(name, repo) as t:
-    t.Interact(commands, expect)
+    t.Interact(commands, expect, callback_before_communicate)
 
 
-def DoTests(cmd_binary):
-  Test.SetCmdBinary(cmd_binary)
+def PromptTests():
   Interact(
       'before initial commit',
       'empty',
@@ -176,6 +180,37 @@ def DoTests(cmd_binary):
         '[child]  #',
         '[child 1/1|REBASE]  #',
       ])
+
+
+def TerminateBatchJobTests():
+  # TODO: Test this somehow. I think it doesn't work because cmd's in
+  # non-interactive mode (?) so it ignores the Ctrl-C.
+  return
+  # Run a batch file containing "pause\npause\n", wait a bit, send a Ctrl-C,
+  # and make sure that it exits cleanly, and that the output doesn't contain
+  # the prompt we don't want.
+  def send_ctrl_c(proc):
+    time.sleep(1)  # Just to get to the first pause, probably not necessary.
+    ctypes.windll.kernel32.GenerateConsoleCtrlEvent(0, proc.pid) # 0 => Ctrl-C
+  Interact(
+      'no terminate batch job prompt',
+      'empty',  # Don't actually need any.
+      commands=[
+        'prompt #',
+        'pause',
+        'pause',
+        ],
+      expect=[
+        '',
+        '',
+      ],
+      callback_before_communicate=send_ctrl_c)
+
+
+def DoTests(cmd_binary):
+  Test.SetCmdBinary(cmd_binary)
+  PromptTests()
+  TerminateBatchJobTests()
 
 
 def main():
