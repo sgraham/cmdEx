@@ -6,6 +6,8 @@
 #include <TlHelp32.h>
 #include <stdio.h>
 
+#include "util.h"
+
 #ifdef _M_IX86
 const char g_dll_name[] = "cmdEx_dll_x86.dll";
 #else
@@ -13,32 +15,6 @@ const char g_dll_name[] = "cmdEx_dll_x86.dll";
 #endif
 
 namespace {
-
-void Fatal(const char* msg, ...) {
-  va_list ap;
-  fprintf(stderr, "cmdEx: FATAL: ");
-  va_start(ap, msg);
-  vfprintf(stderr, msg, ap);
-  va_end(ap);
-  fprintf(stderr, "\n");
-#ifdef _WIN32
-  __debugbreak();
-#endif
-  exit(1);
-}
-
-void Log(const char* msg, ...) {
-#ifndef NDEBUG
-  va_list ap;
-  fprintf(stderr, "cmdEx: ");
-  va_start(ap, msg);
-  vfprintf(stderr, msg, ap);
-  va_end(ap);
-  fprintf(stderr, "\n");
-#else
-  (void)msg;
-#endif
-}
 
 // Either SuspendThread or ResumeThread's all thread in the process identified
 // by |pid|.

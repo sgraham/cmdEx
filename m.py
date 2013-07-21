@@ -29,12 +29,12 @@ def Build(release):
     cflags.append('/Ox')
     cflags.append('/DNDEBUG')
   Run(['cl'] + cflags +
-      ['dll.cc',
+      ['dll.cc', 'util.cc',
        '/link',
        '/dll',
        '/out:out\\cmdEx_dll_x86.dll'])
   Run(['cl'] + cflags +
-      ['inject.cc',
+      ['inject.cc', 'util.cc',
        '/link',
        '/out:out\\cmdEx_x86.exe'])
   Run(['rc'
@@ -42,7 +42,7 @@ def Build(release):
        '/r',
        'resource.rc'])
   Run(['cl'] + cflags +
-      ['main.cc',
+      ['main.cc', 'util.cc',
        'resource.res',
        '/link',
        '/out:out\\cmdEx.exe'])

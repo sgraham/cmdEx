@@ -13,8 +13,7 @@
 #include <string>
 
 #include "git2.h"
-
-namespace {
+#include "util.h"
 
 #define GIT2_FUNCTIONS \
   X(git_branch_name) \
@@ -31,6 +30,12 @@ namespace {
 GIT2_FUNCTIONS
 #undef X
 
+// Another way to do this would be to hook ReadConsoleW and when cmd is
+// requesting 1 character at a time, and the most recent prompt was the
+// "Terminate?" then auto-send a 'y'. Might need to hook WriteConsoleW too to
+// track the output? Or possibly just read from the console directly behind
+// the cursor is enough. Will need to hook ReadConsoleW for improving tab
+// completion anyway.
 /*
 // Replaces PromptUser, and doesn't do "Terminate batch job (Y/N)?" (assumes
 // always 'y').
@@ -41,15 +46,6 @@ int __stdcall ReplacementPromptUser(const wchar_t* a1, DWORD a2, DWORD a3) {
   return PromptUser(a1, a2, a3);
 }
 */
-
-void Error(const char* msg, ...) {
-  va_list ap;
-  fprintf(stderr, "cmdEx: ERROR: ");
-  va_start(ap, msg);
-  vfprintf(stderr, msg, ap);
-  va_end(ap);
-  fprintf(stderr, "\n");
-}
 
 bool IsDirectory(const std::string& path) {
   struct _stat buffer;
@@ -207,6 +203,15 @@ void* RvaToAddr(void* base, unsigned int rva) {
   return reinterpret_cast<char*>(rva) + reinterpret_cast<uintptr_t>(base);
 }
 
+BOOL WINAPI ReadConsoleReplacement(HANDLE input,
+                                   wchar_t* buffer,
+                                   DWORD buffer_size,
+                                   LPDWORD chars_read,
+                                   PCONSOLE_READCONSOLE_CONTROL control) {
+  Log("in ReadConsoleReplacement");
+  return ReadConsoleW(input, buffer, buffer_size, chars_read, control);
+}
+
 void* GetDataDirectory(void* base, int index, int* size) {
   IMAGE_DOS_HEADER* dos_header = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
   IMAGE_NT_HEADERS* nt_headers = reinterpret_cast<IMAGE_NT_HEADERS*>(
@@ -355,15 +360,26 @@ LONG WINAPI HookTrap(EXCEPTION_POINTERS* info) {
   WriteMemory(g_hook_trap_addr, &g_hook_trap_value, sizeof(g_hook_trap_value));
 
   // Patch WNetGetConnectionW's IAT entry.
-  void** imp =
-      GetImportByName(GetModuleHandle(NULL), NULL, "WNetGetConnectionW");
+  void** imp;
+  imp = GetImportByName(GetModuleHandle(NULL), NULL, "WNetGetConnectionW");
   if (!imp) {
     imp =
         GetImportByName(GetModuleHandle(NULL), NULL, "WNetGetConnectionWStub");
   }
   if (!imp)
     Error("couldn't get import for WNetGetConnectionW");
-  *imp = &GetGitBranch;
+  void* func_addr = GetGitBranch;
+  WriteMemory(imp, &func_addr, sizeof(imp));
+
+  // Patch ReadConsoleW in the same way. TODO: Might need JMP patch for Win7?
+  imp = GetImportByName(GetModuleHandle(NULL), NULL, "ReadConsoleW");
+  if (!imp)
+    imp = GetImportByName(GetModuleHandle(NULL), NULL, "ReadConsoleWStub");
+  if (!imp)
+    Error("couldn't get import for ReadConsoleW");
+  __debugbreak();
+  func_addr = ReadConsoleReplacement;
+  WriteMemory(imp, &func_addr, sizeof(imp));
 
   FlushInstructionCache(GetCurrentProcess(), 0, 0);
 
@@ -399,7 +415,7 @@ void OnAttach(HMODULE self) {
   LoadGit2FunctionPointers(self);
 
   // Trap in GetDriveTypeW (this guards the call to WNetGetConnectionW we want
-  // to override. When it's next called and it matches the callsite we want,
+  // to override). When it's next called and it matches the callsite we want,
   // patch the compare from DRIVE_REMOTE to DRIVE_FIXED. Then, restore normal
   // execution of the function, and IAT patch WNetGetConnectionW to point to
   // our git-branch-getter.
@@ -414,8 +430,6 @@ void OnAttach(HMODULE self) {
   unsigned char halt = 0xf4;
   WriteMemory(g_hook_trap_addr, &halt, sizeof(halt));
 }
-
-}  // namespace
 
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID unused) {
   (void)instance;

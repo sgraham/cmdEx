@@ -6,22 +6,11 @@
 #include <direct.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "resource.h"
+#include "util.h"
 
 namespace {
-
-void Fatal(const char* msg, ...) {
-  va_list ap;
-  fprintf(stderr, "cmdEx: FATAL: ");
-  va_start(ap, msg);
-  vfprintf(stderr, msg, ap);
-  va_end(ap);
-  fprintf(stderr, "\n");
-#ifdef _WIN32
-  __debugbreak();
-#endif
-  exit(1);
-}
 
 typedef LONG(
     WINAPI* NtQueryInformationProcessType)(HANDLE, ULONG, PVOID, ULONG, PULONG);
