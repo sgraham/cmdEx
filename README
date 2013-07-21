@@ -5,9 +5,10 @@ Scott Graham <scott.cmdex@h4ck3r.net>
 cmdEx makes some small improvements to cmd.exe. Currently:
 
 - In PROMPT, $M displays git branch information instead of its normal function.
+- Suppress "Terminate batch job (Y/N)?" prompt (prompt isn't displayed, and
+  the assumed answer is always 'y').
 
 Possible future features? (Not implemented)
-- Suppress "Terminate batch job (Y/N)?" prompt.
 - Increase command history length
 - Save command history across shells
 - Improve tab completion (maybe override dir completion?)
