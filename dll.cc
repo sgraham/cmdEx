@@ -377,7 +377,6 @@ LONG WINAPI HookTrap(EXCEPTION_POINTERS* info) {
     imp = GetImportByName(GetModuleHandle(NULL), NULL, "ReadConsoleWStub");
   if (!imp)
     Error("couldn't get import for ReadConsoleW");
-  __debugbreak();
   func_addr = ReadConsoleReplacement;
   WriteMemory(imp, &func_addr, sizeof(imp));
 
