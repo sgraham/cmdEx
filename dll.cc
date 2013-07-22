@@ -269,6 +269,10 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
   // - ...
 
 #if 0
+  // TODO:
+  // - echo characters, and restore after Alt-Up
+  // - I guess I'm doing line wrap. Hmm. Possibly virtualize the whole thing
+  // with scrolling left and right? Might be too weird.
   *chars_read = 0;
   // Restore if we early-exited.
   if (g_saved_text_length) {
