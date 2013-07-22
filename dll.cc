@@ -221,8 +221,52 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
                                    DWORD buffer_size,
                                    LPDWORD chars_read,
                                    PCONSOLE_READCONSOLE_CONTROL control) {
+
+  // It'd be nice to handle Alt-Up for "cd .." here. ReadConsoleInput or
+  // PeekConsoleInput can get those I think. But we are called with mode set
+  // to ENABLE_LINE_INPUT so ReadConsoleW doesn't return until a full line is
+  // typed.
+  //
+  // Hmm, how is tab completion handled? It turns out the |control| is an
+  // escaper mechanism. The dwCtrlWakeupMask field contains |1 << control key|
+  // and this will also trigger a return. So, relatively easy workaround would
+  // be make the cd.. command bound to Ctrl-U (instead of Alt-Up), or that
+  // into the control.dwCtrlWakeupMask, and then if that was the last thing
+  // read then modify the working directory, and resume the read without
+  // notifying cmd.
+  //
+  // It'd be nice to have it work while in the middle of a command rather than
+  // only at the beginning of the line. That would probably mean returning
+  // just "\n" to cmd after setting the new working directory, and then
+  // reechoing the existing command. That in turn would mean having to
+  // actually keep a copy of what's actually been typed which probably isn't
+  // going to be too easy/bug free.
+  //
+  // Another option would be to more completely replace the functionality here
+  // so that we ReadConsoleInput one char ali ta time so that we get the
+  // events we want to handle, and then on \n, \t, etc. do pass back to cmd.
+  // I'm not sure where doskey editing fits in. If if's before it gets to us,
+  // that would work pretty well because we could just handle our keys as long
+  // as they get to us.
+  //
+  // Further option would be to wholesale replace it, then we could fix tab
+  // completion, etc. to be less dumb.
+
+#if 0
+  for (;;) {
+    INPUT_RECORD input_record;
+    DWORD num_read;
+    BOOL ret = PeekConsoleInput(input, &input_record, 1, &num_read);
+    printf("(%d) RCI.EventType: %d\n", ret, input_record.EventType);
+    if (!ret)
+      break;
+  }
+#endif
+
   Log("in ReadConsoleReplacement");
-  return ReadConsoleW(input, buffer, buffer_size, chars_read, control);
+  BOOL ret = ReadConsoleW(input, buffer, buffer_size, chars_read, control);
+  Log("returning %d", ret);
+  return ret;
 }
 
 void* GetDataDirectory(void* base, int index, int* size) {
