@@ -23,14 +23,13 @@ using the x86 cmd.exe.
 
 Build:
 
-mkdir third_party && ^
 cd third_party && ^
 git clone git://github.com/libgit2/libgit2.git && ^
 cd libgit2 && ^
 cmake -G "Visual Studio 11" -DSTDCALL=Off && ^
 devenv.com libgit2.sln /Build Release && ^
 cd ..\.. && ^
-call m.bat
+call m.bat release
 
 
 Run:
