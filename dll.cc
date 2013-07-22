@@ -216,6 +216,9 @@ void* RvaToAddr(void* base, unsigned int rva) {
   return reinterpret_cast<char*>(rva) + reinterpret_cast<uintptr_t>(base);
 }
 
+static wchar_t g_saved_text[20<<10];
+static int g_saved_text_length;
+
 BOOL WINAPI ReadConsoleReplacement(HANDLE input,
                                    wchar_t* buffer,
                                    DWORD buffer_size,
@@ -243,30 +246,73 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
   // going to be too easy/bug free.
   //
   // Another option would be to more completely replace the functionality here
-  // so that we ReadConsoleInput one char ali ta time so that we get the
+  // so that we ReadConsoleInput one char at a time so that we get the
   // events we want to handle, and then on \n, \t, etc. do pass back to cmd.
   // I'm not sure where doskey editing fits in. If if's before it gets to us,
   // that would work pretty well because we could just handle our keys as long
-  // as they get to us.
+  // as they get to us. [Tried this, ReadConsoleInput is pretty raw compared
+  // with ReadConsole and seems to be before doskey (or maybe doskey is even
+  // dispatched from ReadConsole?).]
   //
-  // Further option would be to wholesale replace it, then we could fix tab
-  // completion, etc. to be less dumb.
+  // Further option would be to wholesale replace it, then we could fix
+  // various other editing things to be less annoying (quotes, tab completion
+  // in middle of line, etc.). But, kind of a lot of work. Would need to do:
+  // - typing & backspace
+  // - history? maybe and search in history (is that in doskey?)
+  // - ctrl-arrow skipping
+  // - tab completion
+  // And could add:
+  // - smarter tab completion (. prefixes, git branches, etc.)
+  // - Alt-Up
+  // - history across sessions with better history search
+  // - smarter insert when tab in middle
+  // - ...
 
 #if 0
+  *chars_read = 0;
+  // Restore if we early-exited.
+  if (g_saved_text_length) {
+    *chars_read = g_saved_text_length;
+    memcpy(buffer, g_saved_text, g_saved_text_length * sizeof(wchar_t));
+    g_saved_text_length = 0;
+  }
   for (;;) {
     INPUT_RECORD input_record;
     DWORD num_read;
-    BOOL ret = PeekConsoleInput(input, &input_record, 1, &num_read);
-    printf("(%d) RCI.EventType: %d\n", ret, input_record.EventType);
+    if (*chars_read >= buffer_size - 2)  // TODO: Lame, probably wrong.
+      return 1;
+    BOOL ret = ReadConsoleInput(input, &input_record, 1, &num_read);
     if (!ret)
-      break;
+      return ret;
+    if (input_record.EventType == KEY_EVENT) {
+      const KEY_EVENT_RECORD& key_event = input_record.Event.KeyEvent;
+      if (key_event.bKeyDown) {
+        if (((key_event.dwControlKeyState & LEFT_ALT_PRESSED) ||
+             (key_event.dwControlKeyState & RIGHT_ALT_PRESSED)) &&
+            key_event.wVirtualKeyCode == VK_UP) {
+          // Up dir, save the current text and return the pseudo command.
+          g_saved_text_length = *chars_read;
+          memcpy(g_saved_text, buffer, g_saved_text_length * sizeof(wchar_t));
+          wcscpy(buffer, L"cd..\x0d\x0a");
+          *chars_read = 6;
+          return 1;
+        } else if (key_event.uChar.AsciiChar == 0x0d) {
+          buffer[(*chars_read)++] = 0x0d;
+          buffer[(*chars_read)++] = 0x0a;
+          return 1;
+        } else {
+          buffer[(*chars_read)++] = key_event.uChar.AsciiChar;
+        }
+      }
+    }
   }
-#endif
-
+  (void)control;
+#else
   Log("in ReadConsoleReplacement");
   BOOL ret = ReadConsoleW(input, buffer, buffer_size, chars_read, control);
   Log("returning %d", ret);
   return ret;
+#endif
 }
 
 void* GetDataDirectory(void* base, int index, int* size) {
