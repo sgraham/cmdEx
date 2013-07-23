@@ -10,8 +10,10 @@
 #include <string.h>
 #include <sys/stat.h>
 
+
 #pragma warning(disable: 4530)
 #include <string>
+#include <vector>
 
 #include "git2.h"
 #include "util.h"
@@ -219,6 +221,70 @@ void* RvaToAddr(void* base, unsigned int rva) {
 static wchar_t g_saved_text[20<<10];
 static int g_saved_text_length;
 
+// Directory history navigation. Given a directory history like this (from
+// oldest to newest):
+//
+// c:\a
+// c:\b
+// c:\x
+// c:\y   <--
+//
+// Alt-Left goes 'up' and Alt-Right goes 'down'. If the current directory
+// becomes a directory other than the current item, the item before, or the
+// item after, then everything below the current iterator is dropped, and the
+// new location added (and becomes current). In the history above, Alt-Left
+// goes to c:\x, then Alt-Left again goes to c:\b. Alt-Right or "cd c:\x"
+// would move to c:\x and point the iterator at c:\x. Then, "cd c:\z": because
+// that isn't navigating back or forward, it starts a 'new' forward tree, so
+// c:\y (and all subsequent entries) are dropped, c:\z is added and becomes
+// current.
+
+static std::vector<std::string> g_dir_history;
+static int g_history_position = -1;
+
+void SaveCurrentDirectoryIfChanged() {
+  char cur_path[_MAX_PATH];
+  if (GetCurrentDirectory(sizeof(cur_path), cur_path)) {
+    if (g_history_position == -1 ||
+        cur_path != g_dir_history[g_history_position]) {
+      int prev_pos = max(g_history_position - 1, 0);
+      int next_pos = min(g_history_position + 1,
+                         static_cast<int>(g_dir_history.size() - 1));
+      if (!g_dir_history.empty() && cur_path == g_dir_history[prev_pos]) {
+        g_history_position = prev_pos;
+      } else if (!g_dir_history.empty() &&
+                 cur_path == g_dir_history[next_pos]) {
+        g_history_position = next_pos;
+      } else {
+        // Drop everything "after" the current history position. This is a
+        // no-op if we're just adding.
+        g_dir_history.resize(g_history_position + 1);
+        g_dir_history.push_back(cur_path);
+        g_history_position = static_cast<int>(g_dir_history.size() - 1);
+        printf("history now:\n");
+        for (size_t i = 0; i < g_dir_history.size(); ++i) {
+          printf("  '%s'%s\n",
+                 g_dir_history[i].c_str(),
+                 static_cast<int>(i) == g_history_position ? "  <--" : "");
+        }
+      }
+    }
+  }
+}
+
+// Probably need to render this in the top left on Alt-Left/Right and then
+// hide on some other keystroke.
+void NavigateInDirectoryHistory(int direction) {
+  if (g_history_position == -1) {
+    g_history_position = g_dir_history.size() - 1;
+  }
+  g_history_position += direction;
+  g_history_position = max(g_history_position, 0);
+  g_history_position =
+      min(g_history_position, static_cast<int>(g_dir_history.size() - 1));
+  SetCurrentDirectory(g_dir_history[g_history_position].c_str());
+}
+
 BOOL WINAPI ReadConsoleReplacement(HANDLE input,
                                    wchar_t* buffer,
                                    DWORD buffer_size,
@@ -264,59 +330,69 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
   // And could add:
   // - smarter tab completion (. prefixes, git branches, etc.)
   // - Alt-Up
+  // - Alt-Left for "back" (save at each prompt)
   // - history across sessions with better history search
   // - smarter insert when tab in middle
   // - ...
 
-#if 0
-  // TODO:
-  // - echo characters, and restore after Alt-Up
-  // - I guess I'm doing line wrap. Hmm. Possibly virtualize the whole thing
-  // with scrolling left and right? Might be too weird.
-  *chars_read = 0;
-  // Restore if we early-exited.
-  if (g_saved_text_length) {
-    *chars_read = g_saved_text_length;
-    memcpy(buffer, g_saved_text, g_saved_text_length * sizeof(wchar_t));
-    g_saved_text_length = 0;
-  }
-  for (;;) {
-    INPUT_RECORD input_record;
-    DWORD num_read;
-    if (*chars_read >= buffer_size - 2)  // TODO: Lame, probably wrong.
-      return 1;
-    BOOL ret = ReadConsoleInput(input, &input_record, 1, &num_read);
-    if (!ret)
-      return ret;
-    if (input_record.EventType == KEY_EVENT) {
-      const KEY_EVENT_RECORD& key_event = input_record.Event.KeyEvent;
-      if (key_event.bKeyDown) {
-        if (((key_event.dwControlKeyState & LEFT_ALT_PRESSED) ||
-             (key_event.dwControlKeyState & RIGHT_ALT_PRESSED)) &&
-            key_event.wVirtualKeyCode == VK_UP) {
-          // Up dir, save the current text and return the pseudo command.
-          g_saved_text_length = *chars_read;
-          memcpy(g_saved_text, buffer, g_saved_text_length * sizeof(wchar_t));
-          wcscpy(buffer, L"cd..\x0d\x0a");
-          *chars_read = 6;
-          return 1;
-        } else if (key_event.uChar.AsciiChar == 0x0d) {
-          buffer[(*chars_read)++] = 0x0d;
-          buffer[(*chars_read)++] = 0x0a;
-          return 1;
-        } else {
-          buffer[(*chars_read)++] = key_event.uChar.AsciiChar;
+  if (getenv("CMDEX_READCONSOLE")) {
+    // TODO:
+    // - echo characters, and restore after Alt-Up
+    // - I guess I'm doing line wrap. Hmm. Possibly virtualize the whole thing
+    // with scrolling left and right? Might be too weird.
+    *chars_read = 0;
+    // Restore if we early-exited.
+    if (g_saved_text_length) {
+      *chars_read = g_saved_text_length;
+      memcpy(buffer, g_saved_text, g_saved_text_length * sizeof(wchar_t));
+      g_saved_text_length = 0;
+    }
+    SaveCurrentDirectoryIfChanged();
+    for (;;) {
+      INPUT_RECORD input_record;
+      DWORD num_read;
+      if (*chars_read >= buffer_size - 2)  // TODO: Lame, probably wrong.
+        return 1;
+      BOOL ret = ReadConsoleInput(input, &input_record, 1, &num_read);
+      if (!ret)
+        return ret;
+      if (input_record.EventType == KEY_EVENT) {
+        const KEY_EVENT_RECORD& key_event = input_record.Event.KeyEvent;
+        if (key_event.bKeyDown) {
+          bool alt_down = (key_event.dwControlKeyState & LEFT_ALT_PRESSED) ||
+               (key_event.dwControlKeyState & RIGHT_ALT_PRESSED);
+          if (alt_down && key_event.wVirtualKeyCode == VK_UP) {
+            // Up dir, save the current text and return the pseudo command.
+            g_saved_text_length = *chars_read;
+            memcpy(g_saved_text, buffer, g_saved_text_length * sizeof(wchar_t));
+            wcscpy(buffer, L"cd..\x0d\x0a");
+            *chars_read = 6;
+            return 1;
+          } else if (alt_down && (key_event.wVirtualKeyCode == VK_LEFT ||
+                                  key_event.wVirtualKeyCode == VK_RIGHT)) {
+            // Navigate back or forward.
+            NavigateInDirectoryHistory(
+                key_event.wVirtualKeyCode == VK_LEFT ? -1 : 1);
+            wcscpy(buffer, L"\x0d\x0a");
+            *chars_read = 2;
+            return 1;
+          } else if (key_event.uChar.AsciiChar == 0x0d) {
+            buffer[(*chars_read)++] = 0x0d;
+            buffer[(*chars_read)++] = 0x0a;
+            return 1;
+          } else {
+            buffer[(*chars_read)++] = key_event.uChar.AsciiChar;
+          }
         }
       }
     }
+    (void)control;
+  } else {
+    Log("in ReadConsoleReplacement");
+    BOOL ret = ReadConsoleW(input, buffer, buffer_size, chars_read, control);
+    Log("returning %d", ret);
+    return ret;
   }
-  (void)control;
-#else
-  Log("in ReadConsoleReplacement");
-  BOOL ret = ReadConsoleW(input, buffer, buffer_size, chars_read, control);
-  Log("returning %d", ret);
-  return ret;
-#endif
 }
 
 void* GetDataDirectory(void* base, int index, int* size) {
