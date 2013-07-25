@@ -238,6 +238,10 @@ static int g_saved_text_length;
 // that isn't navigating back or forward, it starts a 'new' forward tree, so
 // c:\y (and all subsequent entries) are dropped, c:\z is added and becomes
 // current.
+//
+// TODO: This doesn't feel quite right. See vim jumplist docs; in particular
+// if revisiting an old location it goes at the end, but is removed from the
+// middle.
 
 static std::vector<std::string> g_dir_history;
 static int g_history_position = -1;
