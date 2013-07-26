@@ -245,32 +245,28 @@ static int g_saved_text_length;
 
 static std::vector<std::string> g_dir_history;
 static int g_history_position = -1;
+static bool g_just_history_navigated = false;
 
 void SaveCurrentDirectoryIfChanged() {
   char cur_path[_MAX_PATH];
   if (GetCurrentDirectory(sizeof(cur_path), cur_path)) {
     if (g_history_position == -1 ||
         cur_path != g_dir_history[g_history_position]) {
-      int prev_pos = max(g_history_position - 1, 0);
-      int next_pos = min(g_history_position + 1,
-                         static_cast<int>(g_dir_history.size() - 1));
-      if (!g_dir_history.empty() && cur_path == g_dir_history[prev_pos]) {
-        g_history_position = prev_pos;
-      } else if (!g_dir_history.empty() &&
-                 cur_path == g_dir_history[next_pos]) {
-        g_history_position = next_pos;
-      } else {
-        // Drop everything "after" the current history position. This is a
-        // no-op if we're just adding.
-        g_dir_history.resize(g_history_position + 1);
-        g_dir_history.push_back(cur_path);
-        g_history_position = static_cast<int>(g_dir_history.size() - 1);
-        printf("history now:\n");
-        for (size_t i = 0; i < g_dir_history.size(); ++i) {
-          printf("  '%s'%s\n",
-                 g_dir_history[i].c_str(),
-                 static_cast<int>(i) == g_history_position ? "  <--" : "");
+      for (std::vector<std::string>::const_iterator i(g_dir_history.begin());
+           i != g_dir_history.end();
+           ++i) {
+        if (*i == cur_path) {
+          g_dir_history.erase(i);
+          break;
         }
+      }
+      g_dir_history.push_back(cur_path);
+      g_history_position = static_cast<int>(g_dir_history.size() - 1);
+      printf("history now:\n");
+      for (size_t i = 0; i < g_dir_history.size(); ++i) {
+        printf("  '%s'%s\n",
+               g_dir_history[i].c_str(),
+               static_cast<int>(i) == g_history_position ? "  <--" : "");
       }
     }
   }
@@ -278,15 +274,18 @@ void SaveCurrentDirectoryIfChanged() {
 
 // Probably need to render this in the top left on Alt-Left/Right and then
 // hide on some other keystroke.
-void NavigateInDirectoryHistory(int direction) {
+bool NavigateInDirectoryHistory(int direction) {
   if (g_history_position == -1) {
     g_history_position = g_dir_history.size() - 1;
   }
+  int original_position = g_history_position;
   g_history_position += direction;
   g_history_position = max(g_history_position, 0);
   g_history_position =
       min(g_history_position, static_cast<int>(g_dir_history.size() - 1));
   SetCurrentDirectory(g_dir_history[g_history_position].c_str());
+  bool changed = g_history_position != original_position;
+  return changed;
 }
 
 BOOL WINAPI ReadConsoleReplacement(HANDLE input,
@@ -351,7 +350,10 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
       memcpy(buffer, g_saved_text, g_saved_text_length * sizeof(wchar_t));
       g_saved_text_length = 0;
     }
-    SaveCurrentDirectoryIfChanged();
+    if (g_just_history_navigated)
+      g_just_history_navigated = false;
+    else
+      SaveCurrentDirectoryIfChanged();
     for (;;) {
       INPUT_RECORD input_record;
       DWORD num_read;
@@ -375,11 +377,14 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
           } else if (alt_down && (key_event.wVirtualKeyCode == VK_LEFT ||
                                   key_event.wVirtualKeyCode == VK_RIGHT)) {
             // Navigate back or forward.
-            NavigateInDirectoryHistory(
+            bool changed = NavigateInDirectoryHistory(
                 key_event.wVirtualKeyCode == VK_LEFT ? -1 : 1);
-            wcscpy(buffer, L"\x0d\x0a");
-            *chars_read = 2;
-            return 1;
+            if (changed) {
+              wcscpy(buffer, L"\x0d\x0a");
+              *chars_read = 2;
+              g_just_history_navigated = true;
+              return 1;
+            }
           } else if (key_event.uChar.AsciiChar == 0x0d) {
             buffer[(*chars_read)++] = 0x0d;
             buffer[(*chars_read)++] = 0x0a;
