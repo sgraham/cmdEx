@@ -262,11 +262,11 @@ void SaveCurrentDirectoryIfChanged() {
       }
       g_dir_history.push_back(cur_path);
       g_history_position = static_cast<int>(g_dir_history.size() - 1);
-      printf("history now:\n");
+      Log("history now:");
       for (size_t i = 0; i < g_dir_history.size(); ++i) {
-        printf("  '%s'%s\n",
-               g_dir_history[i].c_str(),
-               static_cast<int>(i) == g_history_position ? "  <--" : "");
+        Log("  '%s'%s",
+            g_dir_history[i].c_str(),
+            static_cast<int>(i) == g_history_position ? "  <--" : "");
       }
     }
   }
@@ -287,6 +287,84 @@ bool NavigateInDirectoryHistory(int direction) {
   bool changed = g_history_position != original_position;
   return changed;
 }
+
+class LineEditor {
+ public:
+  LineEditor() : console_(INVALID_HANDLE_VALUE), position_(0) {}
+
+  // Called initially and on each editing resumption.
+  void Init(HANDLE console_handle);
+
+  enum HandleAction {
+    kIncomplete,
+    kReturnToCmd,
+    kReturnToCmdThenResume,
+  };
+
+  // Returns whether a command is now ready for return to cmd.
+  HandleAction HandleKeyEvent(const KEY_EVENT_RECORD& key_event);
+
+  void ToCmdBuffer(wchar_t* buffer, DWORD buffer_size, DWORD* num_chars);
+
+ private:
+  HANDLE console_;
+  int start_x_;
+  int start_y_;
+  std::wstring line_;
+  int position_;
+  std::wstring fake_command_;
+};
+
+
+void LineEditor::Init(HANDLE console_handle) {
+  console_ = console_handle;
+  CONSOLE_SCREEN_BUFFER_INFO screen_buffer_info;
+  GetConsoleScreenBufferInfo(console_, &screen_buffer_info);
+  start_x_ = screen_buffer_info.dwCursorPosition.X;
+  start_y_ = screen_buffer_info.dwCursorPosition.Y;
+}
+
+LineEditor::HandleAction LineEditor::HandleKeyEvent(
+    const KEY_EVENT_RECORD& key_event) {
+  if (key_event.bKeyDown) {
+    bool alt_down = (key_event.dwControlKeyState & LEFT_ALT_PRESSED) ||
+                    (key_event.dwControlKeyState & RIGHT_ALT_PRESSED);
+    bool ctrl_down = (key_event.dwControlKeyState & LEFT_CTRL_PRESSED) ||
+                     (key_event.dwControlKeyState & RIGHT_CTRL_PRESSED);
+    if (alt_down && !ctrl_down && key_event.wVirtualKeyCode == VK_UP) {
+      fake_command_ = L"cd..\x0d\x0a";
+      return kReturnToCmdThenResume;
+    } else if (alt_down && !ctrl_down &&
+               (key_event.wVirtualKeyCode == VK_LEFT ||
+                key_event.wVirtualKeyCode == VK_RIGHT)) {
+      // Navigate back or forward.
+      bool changed = NavigateInDirectoryHistory(
+          key_event.wVirtualKeyCode == VK_LEFT ? -1 : 1);
+      if (changed) {
+        fake_command_ = L"\x0d\x0a";
+        g_just_history_navigated = true;
+        return kReturnToCmdThenResume;
+      }
+    } else if (!alt_down && !ctrl_down && key_event.uChar.AsciiChar == 0x0d) {
+      line_ += L"\x0d\x0a";
+      return kReturnToCmd;
+    } else if (key_event.uChar.AsciiChar == VK_BACK) {
+    } else if (isprint(key_event.uChar.AsciiChar)) {
+      line_ += key_event.uChar.AsciiChar;
+      printf("%c", key_event.uChar.AsciiChar);  // XXX
+    }
+  }
+  return kIncomplete;
+}
+
+void LineEditor::ToCmdBuffer(wchar_t* buffer,
+                             DWORD buffer_size,
+                             DWORD* num_chars) {
+  wcscpy_s(buffer, buffer_size, line_.c_str());
+  *num_chars = line_.size();
+}
+
+static LineEditor* g_editor;
 
 BOOL WINAPI ReadConsoleReplacement(HANDLE input,
                                    wchar_t* buffer,
@@ -338,18 +416,25 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
   // - smarter insert when tab in middle
   // - ...
 
+  // printf and backspace, etc. get a little of the way here, but it seems
+  // like it's going to be better to use console apis. the main thing that
+  // printf gets is that it handles wrapping, scrolling the buffer up, etc.
+  // instead, figure out where we are when we start (cursor-wise), keep a
+  // buffer of the current line, scroll the console up to make space if
+  // necessary, and then output the line, reposition the cursor as necessary.
+  // store the cursor in line position and convert to screen as necessary.
+
   if (getenv("CMDEX_READCONSOLE")) {
-    // TODO:
-    // - echo characters, and restore after Alt-Up
-    // - I guess I'm doing line wrap. Hmm. Possibly virtualize the whole thing
-    // with scrolling left and right? Might be too weird.
     *chars_read = 0;
-    // Restore if we early-exited.
+    // Restore if we let cmd reprompt while editing this line.
     if (g_saved_text_length) {
       *chars_read = g_saved_text_length;
       memcpy(buffer, g_saved_text, g_saved_text_length * sizeof(wchar_t));
       g_saved_text_length = 0;
     }
+    if (!g_editor)
+      g_editor = new LineEditor;
+    g_editor->Init(input);
     if (g_just_history_navigated)
       g_just_history_navigated = false;
     else
@@ -357,41 +442,29 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
     for (;;) {
       INPUT_RECORD input_record;
       DWORD num_read;
-      if (*chars_read >= buffer_size - 2)  // TODO: Lame, probably wrong.
+      if (*chars_read >= buffer_size - 2) { // Lame, probably wrong.
+        delete g_editor;
+        g_editor = NULL;
         return 1;
+      }
       BOOL ret = ReadConsoleInput(input, &input_record, 1, &num_read);
-      if (!ret)
+      if (!ret) {
+        delete g_editor;
+        g_editor = NULL;
         return ret;
+      }
       if (input_record.EventType == KEY_EVENT) {
         const KEY_EVENT_RECORD& key_event = input_record.Event.KeyEvent;
-        if (key_event.bKeyDown) {
-          bool alt_down = (key_event.dwControlKeyState & LEFT_ALT_PRESSED) ||
-               (key_event.dwControlKeyState & RIGHT_ALT_PRESSED);
-          if (alt_down && key_event.wVirtualKeyCode == VK_UP) {
-            // Up dir, save the current text and return the pseudo command.
-            g_saved_text_length = *chars_read;
-            memcpy(g_saved_text, buffer, g_saved_text_length * sizeof(wchar_t));
-            wcscpy(buffer, L"cd..\x0d\x0a");
-            *chars_read = 6;
-            return 1;
-          } else if (alt_down && (key_event.wVirtualKeyCode == VK_LEFT ||
-                                  key_event.wVirtualKeyCode == VK_RIGHT)) {
-            // Navigate back or forward.
-            bool changed = NavigateInDirectoryHistory(
-                key_event.wVirtualKeyCode == VK_LEFT ? -1 : 1);
-            if (changed) {
-              wcscpy(buffer, L"\x0d\x0a");
-              *chars_read = 2;
-              g_just_history_navigated = true;
-              return 1;
-            }
-          } else if (key_event.uChar.AsciiChar == 0x0d) {
-            buffer[(*chars_read)++] = 0x0d;
-            buffer[(*chars_read)++] = 0x0a;
-            return 1;
-          } else {
-            buffer[(*chars_read)++] = key_event.uChar.AsciiChar;
-          }
+        LineEditor::HandleAction action = g_editor->HandleKeyEvent(key_event);
+        if (action == LineEditor::kReturnToCmd) {
+          g_editor->ToCmdBuffer(buffer, buffer_size, chars_read);
+          delete g_editor;
+          g_editor = NULL;
+          return 1;
+        } else if (action == LineEditor::kReturnToCmdThenResume) {
+          g_editor->ToCmdBuffer(buffer, buffer_size, chars_read);
+          // Don't delete g_editor, and resume the command.
+          return 1;
         }
       }
     }
