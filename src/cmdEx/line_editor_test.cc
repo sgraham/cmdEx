@@ -4,6 +4,8 @@
 
 #include "cmdEx/line_editor.h"
 
+#include <windows.h>
+
 #include "cmdEx/directory_history.h"
 #include "gtest/gtest.h"
 
@@ -34,10 +36,17 @@ class MockConsoleInterface : public ConsoleInterface {
 }  // namespace
 
 
-TEST(LineEditor, Basic) {
+TEST(LineEditor, AltUp) {
   MockConsoleInterface console;
   MockWorkingDirectory wd;
   DirectoryHistory dir_history(&wd);
   LineEditor le;
   le.Init(&console, &dir_history);
+  wd.Set("c:\\some\\stuff");
+  EXPECT_EQ(LineEditor::kReturnToCmdThenResume,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, VK_UP));
+  wchar_t buf[256];
+  unsigned long num_chars;
+  le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
+  EXPECT_EQ(buf, std::wstring(L"cd..\x0d\x0a"));
 }

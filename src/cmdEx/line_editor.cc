@@ -48,6 +48,12 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
 void LineEditor::ToCmdBuffer(wchar_t* buffer,
                              unsigned long buffer_size,
                              unsigned long* num_chars) {
-  wcscpy_s(buffer, buffer_size, line_.c_str());
-  *num_chars = line_.size();
+  if (!fake_command_.empty()) {
+    wcscpy_s(buffer, buffer_size, fake_command_.c_str());
+    *num_chars = fake_command_.size();
+    fake_command_ = L"";
+  } else {
+    wcscpy_s(buffer, buffer_size, line_.c_str());
+    *num_chars = line_.size();
+  }
 }
