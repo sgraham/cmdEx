@@ -8,7 +8,16 @@
 void Fatal(const char* msg, ...);
 void Error(const char* msg, ...);
 void Log(const char* msg, ...);
+
 #define CHECK(c) \
-  if (!(c)) Fatal("CHECK '" #c "' failed at %s, line %d", __FILE__, __LINE__);
+  if (!(c))      \
+    Fatal("CHECK '" #c "' failed at %s, line %d", __FILE__, __LINE__);
+
+#define PCHECK(c)                                                   \
+  if (!(c))                                                         \
+    Fatal("PCHECK '" #c "' failed at %s, line %d, GetLastError=%d", \
+          __FILE__,                                                 \
+          __LINE__,                                                 \
+          GetLastError());
 
 #endif  // CMDEX_COMMON_UTIL_H_
