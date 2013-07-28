@@ -21,6 +21,24 @@ class MockWorkingDirectory : public WorkingDirectoryInterface {
 
 TEST(DirectoryHistory, Basic) {
   MockWorkingDirectory wd;
+  wd.Set("c:\\x");
 
   DirectoryHistory dh(&wd);
+  dh.StartingEdit();
+  wd.Set("c:\\y");
+  dh.StartingEdit();
+  wd.Set("c:\\z");
+  dh.StartingEdit();
+  dh.NavigateInHistory(-1);
+  EXPECT_EQ("c:\\y", wd.Get());
+  dh.NavigateInHistory(-1);
+  EXPECT_EQ("c:\\x", wd.Get());
+  dh.NavigateInHistory(1);
+  EXPECT_EQ("c:\\y", wd.Get());
+  dh.NavigateInHistory(1);
+  EXPECT_EQ("c:\\z", wd.Get());
+}
+
+TEST(DirectoryHistory, SetFails) {
+  // TODO
 }

@@ -6,6 +6,8 @@
 
 #include <algorithm>
 
+#include "common/util.h"
+
 DirectoryHistory::DirectoryHistory(WorkingDirectoryInterface* working_dir)
     : working_dir_(working_dir), position_(0) {
   last_known_ = working_dir_->Get();
@@ -15,13 +17,16 @@ void DirectoryHistory::StartingEdit() {
   std::string current = working_dir_->Get();
   if (last_known_ != current) {
     CommitLastKnown();
+    position_ = dirs_.size();
     last_known_ = current;
   }
 }
 
 bool DirectoryHistory::NavigateInHistory(int direction) {
+  CHECK(direction == 1 || direction == -1);
+  if (position_ == static_cast<int>(dirs_.size() - 1))
+    CommitLastKnown();
   int original = position_;
-  CommitLastKnown();
   position_ += direction;
   position_ = std::max(position_, 0);
   position_ = std::min(position_, static_cast<int>(dirs_.size() - 1));
@@ -45,5 +50,4 @@ void DirectoryHistory::CommitLastKnown() {
     }
   }
   dirs_.push_back(last_known_);
-  position_ = dirs_.size();
 }
