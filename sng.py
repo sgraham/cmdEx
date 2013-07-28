@@ -10,6 +10,7 @@ import ConfigParser
 import glob
 import optparse
 import os
+import re
 import subprocess
 import sys
 
@@ -60,14 +61,15 @@ CFLAGS = [
   ]
 CFLAGS_DEBUG = [
     '/D_DEBUG',
+    '/MDd',
   ]
 CFLAGS_RELEASE = [
     '/Ox',
     '/GL',
     '/DNDEBUG',
+    '/MD',
   ]
 LDFLAGS = [
-    '/DLL',
   ]
 LDFLAGS_DEBUG = [
   ]
@@ -76,7 +78,8 @@ LDFLAGS_RELEASE = [
   ]
 
 
-for helper in glob.glob('sng_*.py'):
+ALL_AUX_SNG = glob.glob('sng_*.py')
+for helper in ALL_AUX_SNG:
   execfile(helper, globals())
 
 
@@ -98,20 +101,32 @@ def ForwardSlash(path):
   return os.path.normpath(path).replace('\\', '/')
 
 
+def ScanForIncludeAndUpdateLibs(src_path, libs, libtags):
+  with open(src_path, 'r') as f:
+    contents = f.read()
+    for libtag, libname in libtags:
+      if libtag in contents:
+        libs.add(libname)
+
+
+def ScanForRCDATA(src_path):
+  deps = []
+  with open(src_path, 'r') as f:
+    contents = f.read()
+    for mo in re.finditer(r'RCDATA "(.*)"', contents):
+      deps.append(ForwardSlash(mo.group(1)))
+  return deps
+
+
 def Compile(n, target, libtags):
   objs = []
   libs = set()
   for topdir, dirnames, filenames in os.walk(os.path.join('src', target)):
-    print topdir, dirnames, filenames
     for filename in filenames:
       ext = os.path.splitext(filename)[1]
+      src_path = ForwardSlash(os.path.join(topdir, filename))
       if ext in ('.cc', '.cpp', '.cxx'):
-        src_path = ForwardSlash(os.path.join(topdir, filename))
-        with open(src_path, 'r') as f:
-          contents = f.read()
-          for libtag, libname in libtags:
-            if libtag in contents:
-              libs.add(libname)
+        ScanForIncludeAndUpdateLibs(src_path, libs, libtags)
         assert src_path.startswith('src')
         obj_path = '$builddir/' + ForwardSlash(
             src_path[4:] + '.obj').replace('/', '.')
@@ -119,6 +134,12 @@ def Compile(n, target, libtags):
         if '_test' in filename:
           variables = (('cflags', '$cflags_test'),)
         n.build(obj_path, 'cxx', src_path, variables=variables)
+        objs.append(obj_path)
+      elif ext == '.rc':
+        obj_path = '$builddir/' + ForwardSlash(
+            src_path[4:] + '.res').replace('/', '.')
+        used = ScanForRCDATA(src_path)
+        n.build(obj_path, 'rc', src_path, order_only=used)
         objs.append(obj_path)
   return objs, list(libs)
 
@@ -155,17 +176,25 @@ def Generate(is_debug):
     n.variable('ninja_required_version', '1.3')
     n.newline()
 
+    n.comment('The arguments passed to configure.py, for rerunning it.')
+    n.variable('configure_args', ' '.join(sys.argv[1:]))
+
     assert sys.platform == 'win32'
     n.variable('builddir', 'out')
 
-    cflags = CFLAGS[:]
+    cflags = CFLAGS
     have_common = os.path.exists('src/common')
     GetFromDeps(cflags, 'cflags')
     if is_debug:
+      cflags += CFLAGS_DEBUG
       GetFromDeps(cflags, 'cflags_debug')
     else:
+      cflags += CFLAGS_RELEASE
       GetFromDeps(cflags, 'cflags_release')
     n.variable('cflags', cflags)
+    n.variable('rcflags', [x for x in cflags
+                           if x.startswith('/I') or x.startswith('/D')] + [
+                               '/I.'])
 
     cflags_test = cflags[:]
     cflags_test += [
@@ -176,19 +205,33 @@ def Generate(is_debug):
     n.variable('cflags_test', cflags_test)
     n.newline()
 
+    ldflags = LDFLAGS
+    GetFromDeps(ldflags, 'ldflags')
+    if is_debug:
+      ldflags += LDFLAGS_DEBUG
+      GetFromDeps(ldflags, 'ldflags_debug')
+    else:
+      ldflags += LDFLAGS_RELEASE
+      GetFromDeps(ldflags, 'ldflags_release')
+    n.variable('ldflags', ldflags)
+    n.newline()
+
     n.rule('cxx',
            command='cl /nologo /showIncludes $cflags -c $in /Fo$out',
            description='CXX $out',
            deps='msvc')
     n.rule('lib',
-           command='lib /nologo $arflags /out:$out $in',
+           command='lib /nologo $ldflags /out:$out $in',
            description='LIB $out')
     n.rule('link',
-           command='cl /nologo $in $libs /link $ldflags /out:$out',
+           command='link /nologo $in $libs $ldflags /out:$out',
            description='LINK $out')
     n.rule('linkdll',
-           command='cl /nologo $in $libs /link $ldflags /DLL /out:$out',
+           command='link /nologo $in $libs $ldflags /DLL /out:$out',
            description='LINK DLL $out')
+    n.rule('rc',
+           command='rc /nologo /r /fo$out $rcflags $in',
+           description='RC $out')
     n.newline()
 
     targets = [os.path.basename(x) for x in glob.glob('src/*')]
@@ -201,9 +244,12 @@ def Generate(is_debug):
     n.newline()
 
     n.comment('Regenerate build file if build script changes.')
-    n.rule('configure', command=sys.executable + ' sng.py', generator=1)
-    n.build('build.ninja', 'configure',
-            implicit=['sng.py', 'third_party/ninja/misc/ninja_syntax.py'])
+    n.rule('configure',
+           command=sys.executable + ' sng.py ' + '$configure_args',
+           generator=1)
+    build_files = ['sng.py', 'third_party/ninja/misc/ninja_syntax.py'] + \
+                  ALL_AUX_SNG
+    n.build('build.ninja', 'configure', implicit=build_files)
     n.newline()
 
     n.build('all', 'phony', all_binaries)
