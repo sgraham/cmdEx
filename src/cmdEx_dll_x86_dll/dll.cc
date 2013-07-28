@@ -17,6 +17,7 @@
 
 #include "git2.h"
 #include "common/util.h"
+#include "cmdEx/directory_history.h"
 
 #define GIT2_FUNCTIONS \
   X(git_branch_name) \
@@ -243,60 +244,17 @@ static int g_saved_text_length;
 // if revisiting an old location it goes at the end, but is removed from the
 // middle.
 
-std::string GetCurDir() {
-  char cur_path[_MAX_PATH];
-  if (GetCurrentDirectory(sizeof(cur_path), cur_path))
-    return cur_path;
-  return "";
-}
-
-class DirectoryHistory {
+class RealWorkingDirectory : public WorkingDirectoryInterface {
  public:
-  DirectoryHistory() : position_(0), last_known_(GetCurDir()) {}
-
-  // Called when we resume editing again. If the directory isn't the same as
-  // the last known, then we jumped: add last known to the list.
-  void StartingEdit() {
-    std::string current = GetCurDir();
-    if (last_known_ != current) {
-      CommitLastKnown();
-      last_known_ = current;
-    }
+  virtual bool Set(const std::string& dir) override {
+    return SetCurrentDirectory(dir.c_str());
   }
-
-  bool NavigateInHistory(int direction) {
-    int original = position_;
-    CommitLastKnown();
-    position_ += direction;
-    position_ = std::max(position_, 0);
-    position_ = std::min(position_, static_cast<int>(dirs_.size() - 1));
-    // TODO: If a directory has since been removed, remove from history list,
-    // and either go to the next or say something maybe?
-    SetCurrentDirectory(dirs_[position_].c_str());
-    last_known_ = dirs_[position_];
-    return original != position_;
+  virtual std::string Get() override {
+    char cur_path[_MAX_PATH];
+    if (GetCurrentDirectory(sizeof(cur_path), cur_path))
+      return cur_path;
+    return "";
   }
-
- private:
-  void CommitLastKnown() {
-    if (position_ < static_cast<int>(dirs_.size()) &&
-        last_known_ == dirs_[position_])
-      return;
-    for (std::vector<std::string>::const_iterator i(dirs_.begin());
-         i != dirs_.end();
-         ++i) {
-      if (*i == last_known_) {
-        dirs_.erase(i);
-        break;
-      }
-    }
-    dirs_.push_back(last_known_);
-    position_ = dirs_.size();
-  }
-
-  std::vector<std::string> dirs_;
-  std::string last_known_;
-  int position_;
 };
 
 static DirectoryHistory* g_directory_history;
@@ -448,8 +406,10 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
       memcpy(buffer, g_saved_text, g_saved_text_length * sizeof(wchar_t));
       g_saved_text_length = 0;
     }
-    if (!g_directory_history)
-      g_directory_history = new DirectoryHistory;  // This is never freed.
+    if (!g_directory_history) {
+      RealWorkingDirectory* working_directory = new RealWorkingDirectory;
+      g_directory_history = new DirectoryHistory(working_directory);
+    }
     if (!g_editor)
       g_editor = new LineEditor;
     g_editor->Init(input, g_directory_history);

@@ -83,6 +83,8 @@ TEST(DirectoryHistory, WithSetAfterNavigate) {
   EXPECT_EQ("c:\\x", wd.Get());
 }
 
+// TODO
+/*
 TEST(DirectoryHistory, SetFails) {
-  // TODO
 }
+*/
