@@ -25,18 +25,62 @@ TEST(DirectoryHistory, Basic) {
 
   DirectoryHistory dh(&wd);
   dh.StartingEdit();
+
   wd.Set("c:\\y");
   dh.StartingEdit();
+
   wd.Set("c:\\z");
   dh.StartingEdit();
+
   dh.NavigateInHistory(-1);
+  dh.StartingEdit();
   EXPECT_EQ("c:\\y", wd.Get());
+
   dh.NavigateInHistory(-1);
+  dh.StartingEdit();
   EXPECT_EQ("c:\\x", wd.Get());
+
   dh.NavigateInHistory(1);
+  dh.StartingEdit();
   EXPECT_EQ("c:\\y", wd.Get());
+
   dh.NavigateInHistory(1);
+  dh.StartingEdit();
   EXPECT_EQ("c:\\z", wd.Get());
+}
+
+TEST(DirectoryHistory, WithSetAfterNavigate) {
+  MockWorkingDirectory wd;
+  wd.Set("c:\\x");
+
+  DirectoryHistory dh(&wd);
+  dh.StartingEdit();
+
+  wd.Set("c:\\y");
+  dh.StartingEdit();
+
+  wd.Set("c:\\z");
+  dh.StartingEdit();
+
+  dh.NavigateInHistory(-1);
+  dh.StartingEdit();
+  EXPECT_EQ("c:\\y", wd.Get());
+
+  wd.Set("c:\\a");
+  dh.StartingEdit();
+  EXPECT_EQ("c:\\a", wd.Get());
+
+  dh.NavigateInHistory(-1);
+  dh.StartingEdit();
+  EXPECT_EQ("c:\\y", wd.Get());
+
+  dh.NavigateInHistory(-1);
+  dh.StartingEdit();
+  EXPECT_EQ("c:\\z", wd.Get());
+
+  dh.NavigateInHistory(-1);
+  dh.StartingEdit();
+  EXPECT_EQ("c:\\x", wd.Get());
 }
 
 TEST(DirectoryHistory, SetFails) {

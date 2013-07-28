@@ -25,7 +25,7 @@ class DirectoryHistory {
   bool NavigateInHistory(int direction);
 
  private:
-  void CommitLastKnown();
+  bool CommitLastKnown();
 
   WorkingDirectoryInterface* working_dir_;
   std::vector<std::string> dirs_;

@@ -17,15 +17,16 @@ void DirectoryHistory::StartingEdit() {
   std::string current = working_dir_->Get();
   if (last_known_ != current) {
     CommitLastKnown();
-    position_ = dirs_.size();
     last_known_ = current;
   }
 }
 
 bool DirectoryHistory::NavigateInHistory(int direction) {
   CHECK(direction == 1 || direction == -1);
-  if (position_ == static_cast<int>(dirs_.size() - 1))
+  if (position_ == static_cast<int>(dirs_.size()) && direction == -1) {
     CommitLastKnown();
+    position_--;
+  }
   int original = position_;
   position_ += direction;
   position_ = std::max(position_, 0);
@@ -37,10 +38,7 @@ bool DirectoryHistory::NavigateInHistory(int direction) {
   return original != position_;
 }
 
-void DirectoryHistory::CommitLastKnown() {
-  if (position_ < static_cast<int>(dirs_.size()) &&
-      last_known_ == dirs_[position_])
-    return;
+bool DirectoryHistory::CommitLastKnown() {
   for (std::vector<std::string>::const_iterator i(dirs_.begin());
        i != dirs_.end();
        ++i) {
@@ -50,4 +48,6 @@ void DirectoryHistory::CommitLastKnown() {
     }
   }
   dirs_.push_back(last_known_);
+  position_ = dirs_.size();
+  return true;
 }
