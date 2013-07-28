@@ -5,6 +5,8 @@
 #include "gtest/gtest.h"
 #include "cmdEx/directory_history.h"
 
+namespace {
+
 class MockWorkingDirectory : public WorkingDirectoryInterface {
  public:
   bool Set(const std::string& dir) override {
@@ -18,6 +20,8 @@ class MockWorkingDirectory : public WorkingDirectoryInterface {
  private:
   std::string dir_;
 };
+
+}  // namespace
 
 TEST(DirectoryHistory, Basic) {
   MockWorkingDirectory wd;
