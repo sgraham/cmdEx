@@ -24,13 +24,13 @@ using the x86 cmd.exe.
 
 Build:
 
-python sng.py -u         # -u pulls & builds third_party dependencies
-third_party\ninja\ninja
+C:\...\cmdEx>python sng.py -u           # -u pulls third_party dependencies
+C:\...\cmdEx>third_party\ninja\ninja
 
 
 Optionally Test:
 
-C:\...\cmdEx>out\cmdEx_test
+C:\...\cmdEx>out\tests
 C:\...\cmdEx>python test.py
 
 

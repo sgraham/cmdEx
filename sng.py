@@ -54,6 +54,7 @@ def DEP_googletest(action):
 CFLAGS = [
     '/Zi', '/W4', '/WX', '/GR-',
     '/wd4530',
+    '/wd4800',
     '/D_WIN32_WINNT=0x0501',
     '/D_CRT_SECURE_NO_WARNINGS',
     '/DNOMINMAX',
@@ -238,12 +239,35 @@ def Generate(is_debug):
 
     targets = [os.path.basename(x) for x in glob.glob('src/*')]
     all_binaries = []
+    all_test_objs = []
+    all_test_libs = []
     for target in targets:
       objs, libs = Compile(n, target, BuildLibTags(target, targets))
+      no_test_objs = [x for x in objs if  '_test' not in x]
+      test_objs = [x for x in objs if  '_test' in x]
+      all_test_objs += test_objs
       name, rule = BinaryAndRuleForTarget(target)
-      n.build(name, rule, objs, variables=(('libs', libs),))
+      n.build(name, rule, no_test_objs, variables=(('libs', libs),))
+      if test_objs:
+        all_test_libs.append(name)
       all_binaries.append(name)
-    n.newline()
+
+    if all_test_objs:
+      gtest_obj = '$builddir/gtest-all.obj'
+      gtest_main = '$builddir/gtest_main.obj'
+      gtest_cflags = '$cflags_test /wd4100 /Ithird_party/googletest'
+      n.build(gtest_obj, 'cxx',
+              'third_party/googletest/src/gtest-all.cc',
+              variables=(('cflags', gtest_cflags),))
+      n.build(gtest_main, 'cxx',
+              'third_party/googletest/src/gtest_main.cc',
+              variables=(('cflags', gtest_cflags),))
+      test_binary = '$builddir/tests.exe'
+      n.build(test_binary, 'link',
+              all_test_objs + [gtest_obj, gtest_main],
+              variables=(('libs', all_test_libs),))
+      all_binaries.append(test_binary)
+      n.newline()
 
     n.comment('Regenerate build file if build script changes.')
     n.rule('configure',
