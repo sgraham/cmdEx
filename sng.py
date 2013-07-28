@@ -84,6 +84,8 @@ for helper in ALL_AUX_SNG:
 
 
 def UpdateDeps():
+  if not os.path.exists('third_party'):
+    os.makedirs('third_party')
   for name, func in globals().iteritems():
     if name.startswith('DEP_'):
       func('sync')
