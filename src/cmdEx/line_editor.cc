@@ -75,5 +75,6 @@ void LineEditor::RedrawConsole() {
     x = 0;
     offset += num_chars_to_draw;
   }
-  console_->SetCursorLocation(x, y);
+  //TODO
+  //console_->SetCursorLocation(x, y);
 }
