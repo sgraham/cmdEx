@@ -132,7 +132,7 @@ def PromptTests():
         'prompt $M#',
       ],
       expect=[
-        '[(no head)]  #',
+        '[(no head)] #',
       ])
 
   Interact(
@@ -142,7 +142,7 @@ def PromptTests():
         'prompt $M#',
       ],
       expect=[
-        '[master]  #',
+        '[master] #',
       ])
 
   Interact(
@@ -165,8 +165,8 @@ def PromptTests():
         'git checkout HEAD~2 >nul 2>nul',
       ],
       expect=[
-        '[master]  #',
-        '[7b4f1ae...]  #',
+        '[master] #',
+        '[7b4f1ae...] #',
       ])
 
   Interact(
@@ -177,8 +177,8 @@ def PromptTests():
         'git rebase master >nul 2>nul',
       ],
       expect=[
-        '[child]  #',
-        '[child 1/1|REBASE]  #',
+        '[child] #',
+        '[child 1/1|REBASE] #',
       ])
 
 
