@@ -150,7 +150,7 @@ def Compile(n, target, libtags):
         obj_path = '$builddir/' + ForwardSlash(
             src_path[4:] + '.res').replace('/', '.')
         used = ScanForRCDATA(src_path)
-        n.build(obj_path, 'rc', src_path, order_only=used)
+        n.build(obj_path, 'rc', src_path, implicit=used)
         objs.append(obj_path)
   return objs, list(libs)
 
