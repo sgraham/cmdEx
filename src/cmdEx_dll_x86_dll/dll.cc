@@ -10,14 +10,14 @@
 #include <string.h>
 #include <sys/stat.h>
 
-
 #pragma warning(disable: 4530)
 #include <string>
 #include <vector>
 
-#include "git2.h"
-#include "common/util.h"
 #include "cmdEx/directory_history.h"
+#include "cmdEx/line_editor.h"
+#include "common/util.h"
+#include "git2.h"
 
 #define GIT2_FUNCTIONS \
   X(git_branch_name) \
@@ -258,85 +258,6 @@ class RealWorkingDirectory : public WorkingDirectoryInterface {
 };
 
 static DirectoryHistory* g_directory_history;
-
-
-class LineEditor {
- public:
-  LineEditor() : console_(INVALID_HANDLE_VALUE), position_(0) {}
-
-  // Called initially and on each editing resumption. |history| is not owned.
-  void Init(HANDLE console_handle, DirectoryHistory* history);
-
-  enum HandleAction {
-    kIncomplete,
-    kReturnToCmd,
-    kReturnToCmdThenResume,
-  };
-
-  // Returns whether a command is now ready for return to cmd.
-  HandleAction HandleKeyEvent(const KEY_EVENT_RECORD& key_event);
-
-  void ToCmdBuffer(wchar_t* buffer, DWORD buffer_size, DWORD* num_chars);
-
- private:
-  HANDLE console_;
-  int start_x_;
-  int start_y_;
-  std::wstring line_;
-  int position_;
-  std::wstring fake_command_;
-  DirectoryHistory* history_;  // Weak.
-};
-
-
-void LineEditor::Init(HANDLE console_handle, DirectoryHistory* history) {
-  console_ = console_handle;
-  CONSOLE_SCREEN_BUFFER_INFO screen_buffer_info;
-  GetConsoleScreenBufferInfo(console_, &screen_buffer_info);
-  start_x_ = screen_buffer_info.dwCursorPosition.X;
-  start_y_ = screen_buffer_info.dwCursorPosition.Y;
-  history_ = history;
-  history_->StartingEdit();
-}
-
-LineEditor::HandleAction LineEditor::HandleKeyEvent(
-    const KEY_EVENT_RECORD& key_event) {
-  if (key_event.bKeyDown) {
-    bool alt_down = (key_event.dwControlKeyState & LEFT_ALT_PRESSED) ||
-                    (key_event.dwControlKeyState & RIGHT_ALT_PRESSED);
-    bool ctrl_down = (key_event.dwControlKeyState & LEFT_CTRL_PRESSED) ||
-                     (key_event.dwControlKeyState & RIGHT_CTRL_PRESSED);
-    if (alt_down && !ctrl_down && key_event.wVirtualKeyCode == VK_UP) {
-      fake_command_ = L"cd..\x0d\x0a";
-      return kReturnToCmdThenResume;
-    } else if (alt_down && !ctrl_down &&
-               (key_event.wVirtualKeyCode == VK_LEFT ||
-                key_event.wVirtualKeyCode == VK_RIGHT)) {
-      // Navigate back or forward.
-      bool changed = history_->NavigateInHistory(
-          key_event.wVirtualKeyCode == VK_LEFT ? -1 : 1);
-      if (changed) {
-        fake_command_ = L"\x0d\x0a";
-        return kReturnToCmdThenResume;
-      }
-    } else if (!alt_down && !ctrl_down && key_event.uChar.AsciiChar == 0x0d) {
-      line_ += L"\x0d\x0a";
-      return kReturnToCmd;
-    } else if (key_event.uChar.AsciiChar == VK_BACK) {
-    } else if (isprint(key_event.uChar.AsciiChar)) {
-      line_ += key_event.uChar.AsciiChar;
-      printf("%c", key_event.uChar.AsciiChar);  // XXX
-    }
-  }
-  return kIncomplete;
-}
-
-void LineEditor::ToCmdBuffer(wchar_t* buffer,
-                             DWORD buffer_size,
-                             DWORD* num_chars) {
-  wcscpy_s(buffer, buffer_size, line_.c_str());
-  *num_chars = line_.size();
-}
 
 static LineEditor* g_editor;
 
