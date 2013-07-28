@@ -33,13 +33,16 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
         fake_command_ = L"\x0d\x0a";
         return kReturnToCmdThenResume;
       }
-    } else if (!alt_down && !ctrl_down && ascii_char == 0x0d) {
+    } else if (!alt_down && !ctrl_down && vk == VK_RETURN) {
       line_ += L"\x0d\x0a";
       return kReturnToCmd;
     } else if (vk == VK_BACK) {
+      position_ = std::max(0, position_);
+      RedrawConsole();
     } else if (isprint(ascii_char)) {
       line_ += ascii_char;
-      printf("%c", ascii_char);  // XXX
+      position_++;
+      RedrawConsole();
     }
   }
   return kIncomplete;
@@ -56,4 +59,21 @@ void LineEditor::ToCmdBuffer(wchar_t* buffer,
     wcscpy_s(buffer, buffer_size, line_.c_str());
     *num_chars = line_.size();
   }
+}
+
+void LineEditor::RedrawConsole() {
+  int width = console_->GetWidth();
+  int x = start_x_;
+  int y = start_y_;
+  int offset = 0;
+  for (;;) {
+    int num_chars_to_draw = std::min(width - x, static_cast<int>(line_.size()) - offset);
+    if (num_chars_to_draw == 0)
+      break;
+    console_->DrawString(&line_[offset], num_chars_to_draw, x, y);
+    ++y;
+    x = 0;
+    offset += num_chars_to_draw;
+  }
+  console_->SetCursorLocation(x, y);
 }

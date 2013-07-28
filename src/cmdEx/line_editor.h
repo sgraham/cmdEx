@@ -12,6 +12,10 @@ class DirectoryHistory;
 class ConsoleInterface {
  public:
   virtual void GetCursorLocation(int* x, int* y) = 0;
+  virtual int GetWidth() = 0;
+  // |str| not null terminated.
+  virtual void DrawString(const wchar_t* str, int count, int x, int y) = 0;
+  virtual void SetCursorLocation(int x, int y) = 0;
 };
 
 class LineEditor {
@@ -41,6 +45,8 @@ class LineEditor {
                    unsigned long* num_chars);
 
  private:
+  void RedrawConsole();
+
   ConsoleInterface* console_;
   int start_x_;
   int start_y_;

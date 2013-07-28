@@ -260,15 +260,33 @@ class RealWorkingDirectory : public WorkingDirectoryInterface {
 class RealConsole : public ConsoleInterface {
  public:
   RealConsole() : console_(INVALID_HANDLE_VALUE) {}
+
+  void SetConsole(HANDLE console) {
+    console_ = console;
+  }
+
   virtual void GetCursorLocation(int* x, int* y) override {
     CONSOLE_SCREEN_BUFFER_INFO screen_buffer_info;
-    GetConsoleScreenBufferInfo(console_, &screen_buffer_info);
+    PCHECK(GetConsoleScreenBufferInfo(console_, &screen_buffer_info));
     *x = screen_buffer_info.dwCursorPosition.X;
     *y = screen_buffer_info.dwCursorPosition.Y;
   }
 
-  void SetConsole(HANDLE console) {
-    console_ = console;
+  virtual int GetWidth() override {
+    CONSOLE_SCREEN_BUFFER_INFO screen_buffer_info;
+    PCHECK(GetConsoleScreenBufferInfo(console_, &screen_buffer_info));
+    return screen_buffer_info.dwSize.X;
+  }
+
+  virtual void DrawString(const wchar_t* str, int count, int x, int y) {
+    COORD coord = { static_cast<SHORT>(x), static_cast<SHORT>(y) };
+    DWORD written;
+    WriteConsoleOutputCharacterW(console_, str, count, coord, &written);
+  }
+
+  virtual void SetCursorLocation(int x, int y) {
+    COORD coord = { static_cast<SHORT>(x), static_cast<SHORT>(y) };
+    PCHECK(SetConsoleCursorPosition(console_, coord));
   }
 
  private:
@@ -339,6 +357,21 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
   // store the cursor in line position and convert to screen as necessary.
 
   if (getenv("CMDEX_READCONSOLE")) {
+    HANDLE conout =
+        CreateFile("CONOUT$",
+                   GENERIC_WRITE | GENERIC_READ,
+                   FILE_SHARE_WRITE | FILE_SHARE_READ | FILE_SHARE_DELETE,
+                   NULL,
+                   OPEN_EXISTING,
+                   0,
+                   NULL);
+    PCHECK(conout != INVALID_HANDLE_VALUE);
+    // TODO: I'm not completely sure what's going on here. Using |input| as
+    // the handle for console operations doesn't work (the various functions
+    // return err=5 -- "The handle is invalid", but I'm not sure what handle
+    // cmd is giving us here. It's probably wrong to just grab CONOUT$
+    // because we'll be doing interactive editing while things are redirected.
+    //CHECK(conout == GetStdHandle(STD_OUTPUT_HANDLE));
     *chars_read = 0;
     // Restore if we let cmd reprompt while editing this line.
     if (g_saved_text_length) {
@@ -352,7 +385,7 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
     }
     if (!g_editor)
       g_editor = new LineEditor;
-    g_real_console.SetConsole(input);
+    g_real_console.SetConsole(conout);
     g_editor->Init(&g_real_console, g_directory_history);
     for (;;) {
       INPUT_RECORD input_record;
@@ -360,12 +393,13 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
       if (*chars_read >= buffer_size - 2) { // Lame, probably wrong.
         delete g_editor;
         g_editor = NULL;
-        return 1;
+        goto done;
       }
       BOOL ret = ReadConsoleInput(input, &input_record, 1, &num_read);
       if (!ret) {
         delete g_editor;
         g_editor = NULL;
+        CloseHandle(conout);
         return ret;
       }
       if (input_record.EventType == KEY_EVENT) {
@@ -387,17 +421,20 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
           g_editor->ToCmdBuffer(buffer, buffer_size, chars_read);
           delete g_editor;
           g_editor = NULL;
-          return 1;
+          goto done;
         } else if (action == LineEditor::kReturnToCmdThenResume) {
           g_editor->ToCmdBuffer(buffer, buffer_size, chars_read);
           // Don't delete g_editor, and resume the command.
-          return 1;
+          goto done;
         }
       }
     }
     (void)control;
+  done:
+    CloseHandle(conout);
+    return 1;
   } else {
-    Log("in ReadConsoleReplacement");
+    Log("non-overridden ReadConsole");
     BOOL ret = ReadConsoleW(input, buffer, buffer_size, chars_read, control);
     Log("returning %d", ret);
     return ret;
