@@ -52,6 +52,7 @@ def DEP_googletest(action):
 
 CFLAGS = [
     '/Zi', '/W4', '/WX', '/GR-',
+    '/wd4100',
     '/wd4530',
     '/wd4800',
     '/D_WIN32_WINNT=0x0501',
