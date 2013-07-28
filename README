@@ -22,22 +22,24 @@ cmdEx is currently only known to work on Windows 7 and Windows 8, and only when
 using the x86 cmd.exe.
 
 
+Run:
+
+C:\...\cmdEx>out\cmdEx
+[master] C:\...cmdEx>
+
+
 Build:
+
+Requires: git, svn, cmake, devenv.
 
 C:\...\cmdEx>python sng.py -u           # -u pulls third_party dependencies
 C:\...\cmdEx>third_party\ninja\ninja
 
 
-Optionally Test:
+Test:
 
 C:\...\cmdEx>out\tests
 C:\...\cmdEx>python test.py
-
-
-Run:
-
-C:\...\cmdEx>out\cmdEx
-[master] C:\...cmdEx>
 
 
 
