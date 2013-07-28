@@ -7,8 +7,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "resource.h"
-#include "util.h"
+#include "cmdEx_exe/resource.h"
+#include "common/util.h"
 
 namespace {
 

@@ -1,10 +1,11 @@
 *.ilk
-*.pdb
 *.obj
+*.pdb
 *.res
-third_party/libgit2
-tags
+build.ninja
 csearchindex
-downstreamstore
-misc/
 out/
+tags
+third_party/googletest
+third_party/libgit2
+third_party/ninja

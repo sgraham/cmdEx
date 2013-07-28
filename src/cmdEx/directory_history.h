@@ -5,10 +5,13 @@
 #ifndef CMDEX_DIRECTORY_HISTORY_H_
 #define CMDEX_DIRECTORY_HISTORY_H_
 
+#include <string>
+#include <vector>
+
 class WorkingDirectoryInterface {
  public:
-  bool Set(const std::string& dir) = 0;
-  std::string Get() = 0;
+  virtual bool Set(const std::string& dir) = 0;
+  virtual std::string Get() = 0;
 };
 
 class DirectoryHistory {

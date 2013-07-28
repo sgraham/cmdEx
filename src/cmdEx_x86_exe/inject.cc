@@ -6,7 +6,7 @@
 #include <TlHelp32.h>
 #include <stdio.h>
 
-#include "util.h"
+#include "common/util.h"
 
 #ifdef _M_IX86
 const char g_dll_name[] = "cmdEx_dll_x86.dll";

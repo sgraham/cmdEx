@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "resource.h"
+#include "cmdEx_exe/resource.h"
 
 CMDEX_X86_EXE RCDATA "out\\cmdEx_x86.exe"
 CMDEX_DLL_X86_DLL RCDATA "out\\cmdEx_dll_x86.dll"

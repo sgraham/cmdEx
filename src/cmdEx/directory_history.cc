@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "cmdEx/directory_history.h"
+
+#include <algorithm>
+
 DirectoryHistory::DirectoryHistory(WorkingDirectoryInterface* working_dir)
     : working_dir_(working_dir), position_(0) {
   last_known_ = working_dir_->Get();
@@ -19,8 +23,8 @@ bool DirectoryHistory::NavigateInHistory(int direction) {
   int original = position_;
   CommitLastKnown();
   position_ += direction;
-  position_ = max(position_, 0);
-  position_ = min(position_, static_cast<int>(dirs_.size() - 1));
+  position_ = std::max(position_, 0);
+  position_ = std::min(position_, static_cast<int>(dirs_.size() - 1));
   // TODO: If a directory has since been removed, remove from history list,
   // and either go to the next or say something maybe?
   working_dir_->Set(dirs_[position_]);

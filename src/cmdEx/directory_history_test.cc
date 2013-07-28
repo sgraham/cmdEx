@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
-#include "directory_history.h"
+#include "gtest/gtest.h"
+#include "cmdEx/directory_history.h"
 
-class MockWorkingDirectory {
+class MockWorkingDirectory : public WorkingDirectoryInterface {
  public:
-  bool Set(const std::string& dir) OVERRIDE {
+  bool Set(const std::string& dir) override {
     dir_ = dir;
+    return true;
   }
-  std::string Get() OVERRIDE {
+  std::string Get() override {
     return dir_;
   }
 

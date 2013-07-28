@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "git2.h"
-#include "util.h"
+#include "common/util.h"
 
 #define GIT2_FUNCTIONS \
   X(git_branch_name) \
@@ -268,8 +268,8 @@ class DirectoryHistory {
     int original = position_;
     CommitLastKnown();
     position_ += direction;
-    position_ = max(position_, 0);
-    position_ = min(position_, static_cast<int>(dirs_.size() - 1));
+    position_ = std::max(position_, 0);
+    position_ = std::min(position_, static_cast<int>(dirs_.size() - 1));
     // TODO: If a directory has since been removed, remove from history list,
     // and either go to the next or say something maybe?
     SetCurrentDirectory(dirs_[position_].c_str());
