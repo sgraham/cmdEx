@@ -15,6 +15,7 @@ Possible future features? (Not implemented)
   - git commands
   - git branch completion
 - Alt-Up == "cd .."
+- Alt-Left/Right navigate through directory history
 
 
 cmdEx is currently only known to work on Windows 7 and Windows 8, and only when
@@ -27,16 +28,16 @@ python sng.py -u         # -u pulls & builds third_party dependencies
 third_party\ninja\ninja
 
 
+Optionally Test:
+
+C:\...\cmdEx>out\cmdEx_test
+C:\...\cmdEx>python test.py
+
+
 Run:
 
 C:\...\cmdEx>out\cmdEx
 [master] C:\...cmdEx>
-
-
-Test:
-
-C:\...\cmdEx>out\cmdEx_test
-C:\...\cmdEx>python test.py
 
 
 
