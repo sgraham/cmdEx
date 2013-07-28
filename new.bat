@@ -2,13 +2,4 @@
 :: Use of this source code is governed by a BSD-style license that can be
 :: found in the LICENSE file.
 @echo off
-setlocal
-
-::if exist C:\Python27_amd64\python.exe goto :x64
-
-call python m.py %*
-goto :eof
-
-:x64
-call C:\Python27_amd64\python.exe m.py %*
-goto :eof
+%WINDIR%\SysWOW64\\cmd.exe /k out\cmdEx.exe
