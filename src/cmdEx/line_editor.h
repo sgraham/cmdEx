@@ -5,17 +5,21 @@
 #ifndef CMDEX_LINE_EDITOR_H_
 #define CMDEX_LINE_EDITOR_H_
 
-#include <windows.h>
 #include <string>
 
 class DirectoryHistory;
 
+class ConsoleInterface {
+ public:
+  virtual void GetCursorLocation(int* x, int* y) = 0;
+};
+
 class LineEditor {
  public:
-  LineEditor() : console_(INVALID_HANDLE_VALUE), position_(0) {}
+  LineEditor() : console_(NULL), position_(0) {}
 
   // Called initially and on each editing resumption. |history| is not owned.
-  void Init(HANDLE console_handle, DirectoryHistory* history);
+  void Init(ConsoleInterface* console, DirectoryHistory* history);
 
   enum HandleAction {
     kIncomplete,
@@ -24,12 +28,20 @@ class LineEditor {
   };
 
   // Returns whether a command is now ready for return to cmd.
-  HandleAction HandleKeyEvent(const KEY_EVENT_RECORD& key_event);
+  HandleAction HandleKeyEvent(bool pressed,
+                              bool alt_down,
+                              bool ctrl_down,
+                              bool shift_down,
+                              unsigned char ascii_char,
+                              unsigned short unicode_char,
+                              int vk);
 
-  void ToCmdBuffer(wchar_t* buffer, DWORD buffer_size, DWORD* num_chars);
+  void ToCmdBuffer(wchar_t* buffer,
+                   unsigned long buffer_size,
+                   unsigned long* num_chars);
 
  private:
-  HANDLE console_;
+  ConsoleInterface* console_;
   int start_x_;
   int start_y_;
   std::wstring line_;

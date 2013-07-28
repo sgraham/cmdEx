@@ -257,9 +257,28 @@ class RealWorkingDirectory : public WorkingDirectoryInterface {
   }
 };
 
+class RealConsole : public ConsoleInterface {
+ public:
+  RealConsole() : console_(INVALID_HANDLE_VALUE) {}
+  virtual void GetCursorLocation(int* x, int* y) override {
+    CONSOLE_SCREEN_BUFFER_INFO screen_buffer_info;
+    GetConsoleScreenBufferInfo(console_, &screen_buffer_info);
+    *x = screen_buffer_info.dwCursorPosition.X;
+    *y = screen_buffer_info.dwCursorPosition.Y;
+  }
+
+  void SetConsole(HANDLE console) {
+    console_ = console;
+  }
+
+ private:
+  HANDLE console_;
+};
+
 static DirectoryHistory* g_directory_history;
 
 static LineEditor* g_editor;
+static RealConsole g_real_console;
 
 BOOL WINAPI ReadConsoleReplacement(HANDLE input,
                                    wchar_t* buffer,
@@ -333,7 +352,8 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
     }
     if (!g_editor)
       g_editor = new LineEditor;
-    g_editor->Init(input, g_directory_history);
+    g_real_console.SetConsole(input);
+    g_editor->Init(&g_real_console, g_directory_history);
     for (;;) {
       INPUT_RECORD input_record;
       DWORD num_read;
@@ -350,7 +370,19 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
       }
       if (input_record.EventType == KEY_EVENT) {
         const KEY_EVENT_RECORD& key_event = input_record.Event.KeyEvent;
-        LineEditor::HandleAction action = g_editor->HandleKeyEvent(key_event);
+        bool alt_down = (key_event.dwControlKeyState & LEFT_ALT_PRESSED) ||
+                        (key_event.dwControlKeyState & RIGHT_ALT_PRESSED);
+        bool ctrl_down = (key_event.dwControlKeyState & LEFT_CTRL_PRESSED) ||
+                         (key_event.dwControlKeyState & RIGHT_CTRL_PRESSED);
+        bool shift_down = key_event.dwControlKeyState & SHIFT_PRESSED;
+        LineEditor::HandleAction action =
+            g_editor->HandleKeyEvent(key_event.bKeyDown,
+                                     alt_down,
+                                     ctrl_down,
+                                     shift_down,
+                                     key_event.uChar.AsciiChar,
+                                     key_event.uChar.UnicodeChar,
+                                     key_event.wVirtualKeyCode);
         if (action == LineEditor::kReturnToCmd) {
           g_editor->ToCmdBuffer(buffer, buffer_size, chars_read);
           delete g_editor;
