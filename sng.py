@@ -6,7 +6,6 @@
 ridiculously regimented project structure that you probably won't like.
 """
 
-import ConfigParser
 import glob
 import optparse
 import os
