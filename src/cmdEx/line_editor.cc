@@ -43,6 +43,14 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
         return kIncomplete;
       position_--;
       line_.erase(position_, 1);
+    } else if (!alt_down && ctrl_down && vk == 'W') {
+      int from = FindBackwards(position_, " ");
+      line_.erase(from, position_ - from);
+      position_ = from;
+    } else if (!alt_down && ctrl_down && vk == VK_BACK) {
+      int from = FindBackwards(position_, " /\\");
+      line_.erase(from, position_ - from);
+      position_ = from;
     } else if (!alt_down && !ctrl_down && vk == VK_DELETE) {
       if (position_ == static_cast<int>(line_.size()) || line_.empty())
         return kIncomplete;
@@ -101,4 +109,14 @@ void LineEditor::RedrawConsole() {
     x = 0;
   }
   console_->SetCursorLocation(position_ - offset + x, y);
+}
+
+int LineEditor::FindBackwards(int start_at, const char* until) {
+  int result = start_at;
+  while (result >= 0 && strchr(until, line_[result]) != NULL)
+    result--;
+  while (result >= 0 && strchr(until, line_[result]) == NULL)
+    result--;
+  result++;
+  return result;
 }

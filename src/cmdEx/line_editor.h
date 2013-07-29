@@ -46,6 +46,7 @@ class LineEditor {
 
  private:
   void RedrawConsole();
+  int FindBackwards(int start_at, const char* until);
 
   ConsoleInterface* console_;
   int start_x_;
