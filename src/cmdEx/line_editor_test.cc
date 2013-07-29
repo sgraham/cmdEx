@@ -224,6 +224,13 @@ TEST_F(LineEditorTest, HomeEnd) {
   EXPECT_EQ(LineEditor::kIncomplete,
             le.HandleKeyEvent(true, false, false, false, 0, 0, VK_END));
   EXPECT_EQ(3, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, 'A'));
+  EXPECT_EQ(0, console.cursor_x);
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, 'E'));
+  EXPECT_EQ(3, console.cursor_x);
 }
 
 TEST_F(LineEditorTest, KillCtrlW) {

@@ -59,9 +59,11 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       position_ = std::max(0, position_ - 1);
     } else if (!alt_down && !ctrl_down && vk == VK_RIGHT) {
       position_ = std::min(static_cast<int>(line_.size()), position_ + 1);
-    } else if (!alt_down && !ctrl_down && vk == VK_HOME) {
+    } else if ((!alt_down && !ctrl_down && vk == VK_HOME) ||
+               (!alt_down && ctrl_down && vk == 'A')) {
       position_ = 0;
-    } else if (!alt_down && !ctrl_down && vk == VK_END) {
+    } else if ((!alt_down && !ctrl_down && vk == VK_END) ||
+               (!alt_down && ctrl_down && vk == 'E')) {
       position_ = line_.size();
     } else if (isprint(ascii_char)) {
       line_.insert(position_, 1, ascii_char);
