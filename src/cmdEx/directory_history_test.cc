@@ -23,7 +23,7 @@ class MockWorkingDirectory : public WorkingDirectoryInterface {
 
 }  // namespace
 
-TEST(DirectoryHistory, Basic) {
+TEST(DirectoryHistoryTest, Basic) {
   MockWorkingDirectory wd;
   wd.Set("c:\\x");
 
@@ -53,7 +53,7 @@ TEST(DirectoryHistory, Basic) {
   EXPECT_EQ("c:\\z", wd.Get());
 }
 
-TEST(DirectoryHistory, WithSetAfterNavigate) {
+TEST(DirectoryHistoryTest, WithSetAfterNavigate) {
   MockWorkingDirectory wd;
   wd.Set("c:\\x");
 

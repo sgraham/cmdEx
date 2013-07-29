@@ -7,6 +7,7 @@
 #include <windows.h>
 
 #include "cmdEx/directory_history.h"
+#include "common/util.h"
 
 void LineEditor::Init(ConsoleInterface* console, DirectoryHistory* history) {
   console_ = console;
@@ -33,17 +34,19 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
         fake_command_ = L"\x0d\x0a";
         return kReturnToCmdThenResume;
       }
+      return kIncomplete;
     } else if (!alt_down && !ctrl_down && vk == VK_RETURN) {
       line_ += L"\x0d\x0a";
       return kReturnToCmd;
-    } else if (vk == VK_BACK) {
-      position_ = std::max(0, position_);
-      RedrawConsole();
+    } else if (!alt_down && !ctrl_down && vk == VK_LEFT) {
+      position_ = std::max(0, position_ - 1);
+    } else if (!alt_down && !ctrl_down && vk == VK_RIGHT) {
+      position_ = std::min(static_cast<int>(line_.size()), position_ + 1);
     } else if (isprint(ascii_char)) {
       line_ += ascii_char;
       position_++;
-      RedrawConsole();
     }
+    RedrawConsole();
   }
   return kIncomplete;
 }
@@ -63,18 +66,21 @@ void LineEditor::ToCmdBuffer(wchar_t* buffer,
 
 void LineEditor::RedrawConsole() {
   int width = console_->GetWidth();
+  CHECK(width > 0);
   int x = start_x_;
   int y = start_y_;
   int offset = 0;
   for (;;) {
-    int num_chars_to_draw = std::min(width - x, static_cast<int>(line_.size()) - offset);
-    if (num_chars_to_draw == 0)
-      break;
+    int num_chars_to_draw =
+        std::min(width - x, static_cast<int>(line_.size()) - offset);
     console_->DrawString(&line_[offset], num_chars_to_draw, x, y);
+    if (position_ >= offset && position_ < offset + num_chars_to_draw)
+      console_->SetCursorLocation(position_ - offset + x, y);
+    if (offset + num_chars_to_draw >= static_cast<int>(line_.size()))
+      break;
+    offset += num_chars_to_draw;
     ++y;
     x = 0;
-    offset += num_chars_to_draw;
   }
-  //TODO
-  //console_->SetCursorLocation(x, y);
+  console_->SetCursorLocation(position_ - offset + x, y);
 }
