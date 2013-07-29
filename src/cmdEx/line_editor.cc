@@ -43,7 +43,7 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
     } else if (!alt_down && !ctrl_down && vk == VK_RIGHT) {
       position_ = std::min(static_cast<int>(line_.size()), position_ + 1);
     } else if (isprint(ascii_char)) {
-      line_ += ascii_char;
+      line_.insert(position_, 1, ascii_char);
       position_++;
     }
     RedrawConsole();

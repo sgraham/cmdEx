@@ -104,7 +104,7 @@ TEST_F(LineEditorTest, EndCommand) {
   EXPECT_EQ(buf, std::wstring(L"abc\x0d\x0a"));
 }
 
-TEST_F(LineEditorTest, CursorBack) {
+TEST_F(LineEditorTest, CursorArrowSingleLine) {
   EXPECT_EQ(LineEditor::kIncomplete,
             le.HandleKeyEvent(true, false, false, false, 'a', 0, 'A'));
   EXPECT_EQ(LineEditor::kIncomplete,
@@ -135,4 +135,36 @@ TEST_F(LineEditorTest, CursorBack) {
   EXPECT_EQ('a', console.GetCharAt(0, 0));
   EXPECT_EQ('b', console.GetCharAt(1, 0));
   EXPECT_EQ('c', console.GetCharAt(2, 0));
+
+  for (int i = 0; i < 10; ++i) {
+    EXPECT_EQ(LineEditor::kIncomplete,
+              le.HandleKeyEvent(true, false, false, false, 0, 0, VK_RIGHT));
+  }
+  EXPECT_EQ(3, console.cursor_x);
+}
+
+TEST_F(LineEditorTest, InsertChar) {
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 'a', 0, 'A'));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 'b', 0, 'B'));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 'c', 0, 'C'));
+  EXPECT_EQ('a', console.GetCharAt(0, 0));
+  EXPECT_EQ('b', console.GetCharAt(1, 0));
+  EXPECT_EQ('c', console.GetCharAt(2, 0));
+  EXPECT_EQ(3, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 'x', 0, 'X'));
+
+  EXPECT_EQ('a', console.GetCharAt(0, 0));
+  EXPECT_EQ('x', console.GetCharAt(1, 0));
+  EXPECT_EQ('b', console.GetCharAt(2, 0));
+  EXPECT_EQ('c', console.GetCharAt(3, 0));
+  EXPECT_EQ(2, console.cursor_x);
 }
