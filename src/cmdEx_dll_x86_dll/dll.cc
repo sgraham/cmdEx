@@ -411,8 +411,8 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
         bool shift_down = key_event.dwControlKeyState & SHIFT_PRESSED;
         LineEditor::HandleAction action =
             g_editor->HandleKeyEvent(key_event.bKeyDown,
-                                     alt_down,
                                      ctrl_down,
+                                     alt_down,
                                      shift_down,
                                      key_event.uChar.AsciiChar,
                                      key_event.uChar.UnicodeChar,

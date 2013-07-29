@@ -82,7 +82,7 @@ class LineEditorTest : public ::testing::Test {
 
 TEST_F(LineEditorTest, AltUp) {
   EXPECT_EQ(LineEditor::kReturnToCmdThenResume,
-            le.HandleKeyEvent(true, true, false, false, 0, 0, VK_UP));
+            le.HandleKeyEvent(true, false, true, false, 0, 0, VK_UP));
   wchar_t buf[256];
   unsigned long num_chars;
   le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
@@ -168,3 +168,66 @@ TEST_F(LineEditorTest, InsertChar) {
   EXPECT_EQ('c', console.GetCharAt(3, 0));
   EXPECT_EQ(2, console.cursor_x);
 }
+
+TEST_F(LineEditorTest, Backspace) {
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 'a', 0, 'A'));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 'b', 0, 'B'));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 'c', 0, 'C'));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_BACK));
+  EXPECT_EQ('a', console.GetCharAt(0, 0));
+  EXPECT_EQ('b', console.GetCharAt(1, 0));
+  EXPECT_EQ(' ', console.GetCharAt(2, 0));
+  EXPECT_EQ(2, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(0, console.cursor_x);
+  EXPECT_EQ('a', console.GetCharAt(0, 0));
+  EXPECT_EQ('b', console.GetCharAt(1, 0));
+  EXPECT_EQ(' ', console.GetCharAt(2, 0));
+}
+
+TEST_F(LineEditorTest, Delete) {
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 'a', 0, 'A'));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 'b', 0, 'B'));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 'c', 0, 'C'));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_DELETE));
+  EXPECT_EQ('a', console.GetCharAt(0, 0));
+  EXPECT_EQ('b', console.GetCharAt(1, 0));
+  EXPECT_EQ('c', console.GetCharAt(2, 0));
+  EXPECT_EQ(3, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(1, console.cursor_x);
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_DELETE));
+  EXPECT_EQ('a', console.GetCharAt(0, 0));
+  EXPECT_EQ('c', console.GetCharAt(1, 0));
+  EXPECT_EQ(' ', console.GetCharAt(2, 0));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_DELETE));
+  EXPECT_EQ('a', console.GetCharAt(0, 0));
+  EXPECT_EQ(' ', console.GetCharAt(1, 0));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(0, console.cursor_x);
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_DELETE));
+  EXPECT_EQ(' ', console.GetCharAt(0, 0));
+}
+
+//TEST_F(LineEditorTest, HomeEnd) {
+//}

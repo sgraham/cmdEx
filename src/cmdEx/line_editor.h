@@ -33,8 +33,8 @@ class LineEditor {
 
   // Returns whether a command is now ready for return to cmd.
   HandleAction HandleKeyEvent(bool pressed,
-                              bool alt_down,
                               bool ctrl_down,
+                              bool alt_down,
                               bool shift_down,
                               unsigned char ascii_char,
                               unsigned short unicode_char,

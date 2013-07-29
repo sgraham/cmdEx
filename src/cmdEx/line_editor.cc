@@ -17,8 +17,8 @@ void LineEditor::Init(ConsoleInterface* console, DirectoryHistory* history) {
 }
 
 LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
-                                                    bool alt_down,
                                                     bool ctrl_down,
+                                                    bool alt_down,
                                                     bool shift_down,
                                                     unsigned char ascii_char,
                                                     unsigned short unicode_char,
@@ -38,6 +38,15 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
     } else if (!alt_down && !ctrl_down && vk == VK_RETURN) {
       line_ += L"\x0d\x0a";
       return kReturnToCmd;
+    } else if (!alt_down && !ctrl_down && vk == VK_BACK) {
+      if (position_ == 0 || line_.empty())
+        return kIncomplete;
+      position_--;
+      line_.erase(position_, 1);
+    } else if (!alt_down && !ctrl_down && vk == VK_DELETE) {
+      if (position_ == static_cast<int>(line_.size()) || line_.empty())
+        return kIncomplete;
+      line_.erase(position_, 1);
     } else if (!alt_down && !ctrl_down && vk == VK_LEFT) {
       position_ = std::max(0, position_ - 1);
     } else if (!alt_down && !ctrl_down && vk == VK_RIGHT) {
@@ -76,8 +85,13 @@ void LineEditor::RedrawConsole() {
     console_->DrawString(&line_[offset], num_chars_to_draw, x, y);
     if (position_ >= offset && position_ < offset + num_chars_to_draw)
       console_->SetCursorLocation(position_ - offset + x, y);
-    if (offset + num_chars_to_draw >= static_cast<int>(line_.size()))
+    if (offset + num_chars_to_draw >= static_cast<int>(line_.size())) {
+      static wchar_t space = L' ';
+      // TODO: Very inefficient when it's actually a console.
+      for (int i = offset + num_chars_to_draw; i < width - 1; ++i)
+        console_->DrawString(&space, 1, i + x, y);
       break;
+    }
     offset += num_chars_to_draw;
     ++y;
     x = 0;
