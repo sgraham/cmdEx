@@ -48,6 +48,14 @@ class MockConsoleInterface : public ConsoleInterface {
     ASSERT_LT(y, height);
     memcpy(&screen_data[y * width + x], str, count * sizeof(wchar_t));
   }
+  virtual void FillChar(wchar_t ch, int count, int x, int y) override {
+    ASSERT_GE(x, 0);
+    ASSERT_GE(y, 0);
+    ASSERT_LT(x + count, width);
+    ASSERT_LT(y, height);
+    for (int i = 0; i < count; ++i)
+      screen_data[y * width + x + i] = ch;
+  }
   virtual void SetCursorLocation(int x, int y) {
     cursor_x = x;
     cursor_y = y;
@@ -286,4 +294,16 @@ TEST_F(LineEditorTest, KillCtrlBack) {
             le.HandleKeyEvent(true, true, false, false, 0, 0, VK_BACK));
   EXPECT_EQ(0, console.cursor_x);
   EXPECT_EQ(' ', console.GetCharAt(0, 0));
+}
+
+TEST_F(LineEditorTest, ClearScreen) {
+  console.cursor_x = 10;
+  console.cursor_y = 5;
+  TypeLetters("stuff");
+  EXPECT_EQ(LineEditor::kReturnToCmdThenResume,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, 'L'));
+  wchar_t buf[256];
+  unsigned long num_chars;
+  le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
+  EXPECT_EQ(buf, std::wstring(L"cls\x0d\x0a"));
 }

@@ -14,6 +14,7 @@ void LineEditor::Init(ConsoleInterface* console, DirectoryHistory* history) {
   console->GetCursorLocation(&start_x_, &start_y_);
   history_ = history;
   history_->StartingEdit();
+  RedrawConsole();
 }
 
 LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
@@ -32,9 +33,13 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       bool changed = history_->NavigateInHistory(vk == VK_LEFT ? -1 : 1);
       if (changed) {
         fake_command_ = L"\x0d\x0a";
+        printf("\n");
         return kReturnToCmdThenResume;
       }
       return kIncomplete;
+    } else if (!alt_down && ctrl_down && vk == 'L') {
+      fake_command_ = L"cls\x0d\x0a";
+      return kReturnToCmdThenResume;
     } else if (!alt_down && !ctrl_down && vk == VK_RETURN) {
       line_ += L"\x0d\x0a";
       return kReturnToCmd;
@@ -100,10 +105,8 @@ void LineEditor::RedrawConsole() {
     if (position_ >= offset && position_ < offset + num_chars_to_draw)
       console_->SetCursorLocation(position_ - offset + x, y);
     if (offset + num_chars_to_draw >= static_cast<int>(line_.size())) {
-      static wchar_t space = L' ';
-      // TODO: Very inefficient when it's actually a console.
-      for (int i = offset + num_chars_to_draw; i < width - 1; ++i)
-        console_->DrawString(&space, 1, i + x, y);
+      int fillx = x + offset + num_chars_to_draw;
+      console_->FillChar(L' ', width - fillx - 1, fillx, y);
       break;
     }
     offset += num_chars_to_draw;

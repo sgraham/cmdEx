@@ -15,6 +15,7 @@ class ConsoleInterface {
   virtual int GetWidth() = 0;
   // |str| not null terminated.
   virtual void DrawString(const wchar_t* str, int count, int x, int y) = 0;
+  virtual void FillChar(wchar_t ch, int count, int x, int y) = 0;
   virtual void SetCursorLocation(int x, int y) = 0;
 };
 

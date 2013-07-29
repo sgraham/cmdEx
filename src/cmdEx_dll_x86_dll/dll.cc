@@ -278,13 +278,20 @@ class RealConsole : public ConsoleInterface {
     return screen_buffer_info.dwSize.X;
   }
 
-  virtual void DrawString(const wchar_t* str, int count, int x, int y) {
+  virtual void DrawString(const wchar_t* str, int count, int x, int y)
+      override {
     COORD coord = { static_cast<SHORT>(x), static_cast<SHORT>(y) };
     DWORD written;
     WriteConsoleOutputCharacterW(console_, str, count, coord, &written);
   }
 
-  virtual void SetCursorLocation(int x, int y) {
+  virtual void FillChar(wchar_t ch, int count, int x, int y) override {
+    COORD coord = { static_cast<SHORT>(x), static_cast<SHORT>(y) };
+    DWORD written;
+    FillConsoleOutputCharacterW(console_, ch, count, coord, &written);
+  }
+
+  virtual void SetCursorLocation(int x, int y) override {
     COORD coord = { static_cast<SHORT>(x), static_cast<SHORT>(y) };
     PCHECK(SetConsoleCursorPosition(console_, coord));
   }
