@@ -229,5 +229,21 @@ TEST_F(LineEditorTest, Delete) {
   EXPECT_EQ(' ', console.GetCharAt(0, 0));
 }
 
-//TEST_F(LineEditorTest, HomeEnd) {
-//}
+TEST_F(LineEditorTest, HomeEnd) {
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 'a', 0, 'A'));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 'b', 0, 'B'));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 'c', 0, 'C'));
+  EXPECT_EQ('a', console.GetCharAt(0, 0));
+  EXPECT_EQ('b', console.GetCharAt(1, 0));
+  EXPECT_EQ('c', console.GetCharAt(2, 0));
+  EXPECT_EQ(3, console.cursor_x);
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_HOME));
+  EXPECT_EQ(0, console.cursor_x);
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_END));
+  EXPECT_EQ(3, console.cursor_x);
+}
