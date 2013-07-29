@@ -40,9 +40,20 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
     } else if (!alt_down && ctrl_down && vk == 'L') {
       fake_command_ = L"cls\x0d\x0a";
       return kReturnToCmdThenResume;
+    } else if (!alt_down && ctrl_down && vk == 'D') {
+      if (line_.empty() && position_ == 0) {
+        line_ = L"exit";
+        RedrawConsole();
+        fake_command_ = L"exit\x0d\x0a";
+        return kReturnToCmdThenResume;
+      }
+      return kIncomplete;
     } else if (!alt_down && !ctrl_down && vk == VK_RETURN) {
       line_ += L"\x0d\x0a";
       return kReturnToCmd;
+    } else if (!alt_down && !ctrl_down && vk == VK_ESCAPE) {
+      line_ = L"";
+      position_ = 0;
     } else if (!alt_down && !ctrl_down && vk == VK_BACK) {
       if (position_ == 0 || line_.empty())
         return kIncomplete;

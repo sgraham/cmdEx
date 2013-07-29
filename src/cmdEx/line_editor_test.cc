@@ -307,3 +307,44 @@ TEST_F(LineEditorTest, ClearScreen) {
   le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
   EXPECT_EQ(buf, std::wstring(L"cls\x0d\x0a"));
 }
+
+TEST_F(LineEditorTest, EscClearLine) {
+  TypeLetters("stuff");
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_ESCAPE));
+  EXPECT_EQ(0, console.cursor_x);
+  EXPECT_EQ(' ', console.GetCharAt(0, 0));
+  EXPECT_EQ(' ', console.GetCharAt(4, 0));
+}
+
+TEST_F(LineEditorTest, CtrlD) {
+  TypeLetters("a");
+  // No exit if there's stuff.
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, 'D'));
+  EXPECT_EQ(1, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_BACK));
+  EXPECT_EQ(0, console.cursor_x);
+
+  // exit if empty.
+  EXPECT_EQ(LineEditor::kReturnToCmdThenResume,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, 'D'));
+  EXPECT_EQ('e', console.GetCharAt(0, 0));
+  EXPECT_EQ('x', console.GetCharAt(1, 0));
+  EXPECT_EQ('i', console.GetCharAt(2, 0));
+  EXPECT_EQ('t', console.GetCharAt(3, 0));
+  wchar_t buf[256];
+  unsigned long num_chars;
+  le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
+  EXPECT_EQ(buf, std::wstring(L"exit\x0d\x0a"));
+}
+
+// F8, PgUp, PgDown, Up, Down for command history
+// Ctrl-C
+// Tab complete {file, dir, branch }
+// Some intelligence for when to complete which things (md, cd, git <stuff>)
+// Ctrl-V to paste
+// Ctrl-Y (?) to copy line
+// Multiline probably crashes

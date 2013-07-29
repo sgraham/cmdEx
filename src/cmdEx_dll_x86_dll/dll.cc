@@ -416,6 +416,16 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
         bool ctrl_down = (key_event.dwControlKeyState & LEFT_CTRL_PRESSED) ||
                          (key_event.dwControlKeyState & RIGHT_CTRL_PRESSED);
         bool shift_down = key_event.dwControlKeyState & SHIFT_PRESSED;
+        if (key_event.bKeyDown && !alt_down && ctrl_down && !shift_down &&
+            key_event.wVirtualKeyCode == VK_RETURN) {
+          char buf[_MAX_PATH + 100];
+          sprintf(buf,
+                  "explorer /e,\"%s\"",
+                  g_directory_history->GetWorkingDirectoryInterface()->Get()
+                      .c_str());
+          system(buf);
+          continue;
+        }
         LineEditor::HandleAction action =
             g_editor->HandleKeyEvent(key_event.bKeyDown,
                                      ctrl_down,

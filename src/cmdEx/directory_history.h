@@ -24,6 +24,10 @@ class DirectoryHistory {
 
   bool NavigateInHistory(int direction);
 
+  WorkingDirectoryInterface* GetWorkingDirectoryInterface() {
+    return working_dir_;
+  }
+
  private:
   bool CommitLastKnown();
 
