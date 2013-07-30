@@ -370,7 +370,7 @@ bool MockCompleterBasic(const std::wstring& line,
   return true;
 }
 
-TEST_F(LineEditorTest, CompleteBasic) {
+TEST_F(LineEditorTest, TabCompleteBasic) {
   le.RegisterCompleter(MockCompleterBasic);
   TypeLetters("hi ab");
 
@@ -427,6 +427,67 @@ TEST_F(LineEditorTest, CompleteBasic) {
   EXPECT_EQ('x', console.GetCharAt(6, 0));
   EXPECT_EQ('x', console.GetCharAt(7, 0));
   EXPECT_EQ(' ', console.GetCharAt(8, 0));
+}
+
+TEST_F(LineEditorTest, TabCompleteReverseLoop) {
+  le.RegisterCompleter(MockCompleterBasic);
+  TypeLetters("hi ab");
+
+  // Start backwards.
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, true, VK_TAB, 0, VK_TAB));
+  EXPECT_EQ(6, console.cursor_x);
+  EXPECT_EQ('h', console.GetCharAt(0, 0));
+  EXPECT_EQ('i', console.GetCharAt(1, 0));
+  EXPECT_EQ(' ', console.GetCharAt(2, 0));
+  EXPECT_EQ('a', console.GetCharAt(3, 0));
+  EXPECT_EQ('b', console.GetCharAt(4, 0));
+  EXPECT_EQ('z', console.GetCharAt(5, 0));
+  EXPECT_EQ(' ', console.GetCharAt(6, 0));
+
+  // To natural first.
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, VK_TAB, 0, VK_TAB));
+  EXPECT_EQ(8, console.cursor_x);
+  EXPECT_EQ('h', console.GetCharAt(0, 0));
+  EXPECT_EQ('i', console.GetCharAt(1, 0));
+  EXPECT_EQ(' ', console.GetCharAt(2, 0));
+  EXPECT_EQ('a', console.GetCharAt(3, 0));
+  EXPECT_EQ('b', console.GetCharAt(4, 0));
+  EXPECT_EQ('x', console.GetCharAt(5, 0));
+  EXPECT_EQ('x', console.GetCharAt(6, 0));
+  EXPECT_EQ('x', console.GetCharAt(7, 0));
+  EXPECT_EQ(' ', console.GetCharAt(8, 0));
+
+  // Cycle next.
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, VK_TAB, 0, VK_TAB));
+  EXPECT_EQ(10, console.cursor_x);
+  EXPECT_EQ('h', console.GetCharAt(0, 0));
+  EXPECT_EQ('i', console.GetCharAt(1, 0));
+  EXPECT_EQ(' ', console.GetCharAt(2, 0));
+  EXPECT_EQ('a', console.GetCharAt(3, 0));
+  EXPECT_EQ('b', console.GetCharAt(4, 0));
+  EXPECT_EQ('y', console.GetCharAt(5, 0));
+  EXPECT_EQ('y', console.GetCharAt(6, 0));
+  EXPECT_EQ('y', console.GetCharAt(7, 0));
+  EXPECT_EQ('y', console.GetCharAt(8, 0));
+  EXPECT_EQ('y', console.GetCharAt(9, 0));
+  EXPECT_EQ(' ', console.GetCharAt(10, 0));
+
+  // Back two to last one.
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, true, VK_TAB, 0, VK_TAB));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, true, VK_TAB, 0, VK_TAB));
+  EXPECT_EQ(6, console.cursor_x);
+  EXPECT_EQ('h', console.GetCharAt(0, 0));
+  EXPECT_EQ('i', console.GetCharAt(1, 0));
+  EXPECT_EQ(' ', console.GetCharAt(2, 0));
+  EXPECT_EQ('a', console.GetCharAt(3, 0));
+  EXPECT_EQ('b', console.GetCharAt(4, 0));
+  EXPECT_EQ('z', console.GetCharAt(5, 0));
+  EXPECT_EQ(' ', console.GetCharAt(6, 0));
 }
 
 // F8, PgUp, PgDown, Up, Down for command history
