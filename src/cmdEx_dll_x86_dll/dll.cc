@@ -300,6 +300,30 @@ class RealConsole : public ConsoleInterface {
   HANDLE console_;
 };
 
+const wchar_t* kGitCommandsPorcelain[] = {
+  L"add", L"am", L"archive", L"bisect", L"branch", L"bundle", L"checkout",
+  L"cherry-pick", L"citool", L"clean", L"clone", L"commit", L"describe",
+  L"diff", L"fetch", L"format-patch", L"gc", L"grep", L"gui", L"init", L"log",
+  L"merge", L"mv", L"notes", L"pull", L"push", L"rebase", L"reset", L"revert",
+  L"rm", L"shortlog", L"show", L"stash", L"status", L"submodule", L"tag",
+};
+
+bool GitCommandNameCompleter(const std::wstring& line,
+                             int position,
+                             std::vector<std::wstring>* results,
+                             int* completion_start) {
+  if (line[0] == L'g' && line[1] == L'i' && line[2] == 't' && line[3] == ' ' &&
+      position == 4) {
+    *completion_start = 4;
+    for (size_t i = 0; i < ARRAYSIZE(kGitCommandsPorcelain); ++i) {
+      results->push_back(kGitCommandsPorcelain[i]);
+    }
+    return true;
+  }
+  return false;
+}
+
+
 static DirectoryHistory* g_directory_history;
 
 static LineEditor* g_editor;
@@ -390,8 +414,10 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
       RealWorkingDirectory* working_directory = new RealWorkingDirectory;
       g_directory_history = new DirectoryHistory(working_directory);
     }
-    if (!g_editor)
+    if (!g_editor) {
       g_editor = new LineEditor;
+      g_editor->RegisterCompleter(GitCommandNameCompleter);
+    }
     g_real_console.SetConsole(conout);
     g_editor->Init(&g_real_console, g_directory_history);
     for (;;) {

@@ -490,6 +490,29 @@ TEST_F(LineEditorTest, TabCompleteReverseLoop) {
   EXPECT_EQ(' ', console.GetCharAt(6, 0));
 }
 
+TEST_F(LineEditorTest, TabCompleteStopsAfterNonTab) {
+  le.RegisterCompleter(MockCompleterBasic);
+  TypeLetters("hi ab");
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, VK_TAB, 0, VK_TAB));
+  EXPECT_TRUE(le.IsCompleting());
+  EXPECT_EQ(8, console.cursor_x);
+  EXPECT_EQ('h', console.GetCharAt(0, 0));
+  EXPECT_EQ('i', console.GetCharAt(1, 0));
+  EXPECT_EQ(' ', console.GetCharAt(2, 0));
+  EXPECT_EQ('a', console.GetCharAt(3, 0));
+  EXPECT_EQ('b', console.GetCharAt(4, 0));
+  EXPECT_EQ('x', console.GetCharAt(5, 0));
+  EXPECT_EQ('x', console.GetCharAt(6, 0));
+  EXPECT_EQ('x', console.GetCharAt(7, 0));
+  EXPECT_EQ(' ', console.GetCharAt(8, 0));
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, ' ', 0, VK_SPACE));
+  EXPECT_FALSE(le.IsCompleting());
+}
+
 // F8, PgUp, PgDown, Up, Down for command history
 // Ctrl-C to break line
 // Tab complete {file, dir, branch}

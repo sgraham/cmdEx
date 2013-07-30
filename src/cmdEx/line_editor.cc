@@ -25,6 +25,14 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
                                                     unsigned short unicode_char,
                                                     int vk) {
   if (pressed) {
+    // Assume that it's not going to continue, and let tab handling put it
+    // back on if it did continue. TODO: We hang on to results until next
+    // completion which is kind of dumb.
+    int previous_completion_begin = completion_word_started_begin_;
+    // TODO: This test sucks, need a better way to determine mode.
+    if (vk != VK_SHIFT && vk != VK_CONTROL && vk != VK_MENU)
+      completion_word_started_begin_ = -1;
+
     if (alt_down && !ctrl_down && vk == VK_UP) {
       fake_command_ = L"cd..\x0d\x0a";
       return kReturnToCmdThenResume;
@@ -68,6 +76,8 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       line_.erase(from, position_ - from);
       position_ = from;
     } else if (!alt_down && !ctrl_down && vk == VK_TAB) {
+      // We're continuing completion, keep it on.
+      completion_word_started_begin_ = previous_completion_begin;
       TabComplete(!shift_down);
     } else if (!alt_down && ctrl_down && vk == VK_BACK) {
       int from = FindBackwards(position_, " /\\");
@@ -113,6 +123,10 @@ void LineEditor::RegisterCompleter(Completer completer) {
   completers_.push_back(completer);
 }
 
+bool LineEditor::IsCompleting() const {
+  return !completion_results_.empty() && completion_word_started_begin_ != -1;
+}
+
 void LineEditor::RedrawConsole() {
   int width = console_->GetWidth();
   CHECK(width > 0);
@@ -149,10 +163,12 @@ int LineEditor::FindBackwards(int start_at, const char* until) {
 
 void LineEditor::TabComplete(bool forward_cycle) {
   bool started = false;
-  if (completion_results_.empty()) {
+  if (!IsCompleting()) {
     for (std::vector<Completer>::const_iterator i(completers_.begin());
         i != completers_.end();
         ++i) {
+      completion_results_.empty();
+      completion_word_started_begin_ = -1;
       if ((*i)(line_,
                position_,
                &completion_results_,
@@ -162,12 +178,10 @@ void LineEditor::TabComplete(bool forward_cycle) {
         started = true;
         break;
       }
-      completion_results_.empty();
-      completion_word_started_begin_ = -1;
     }
   }
 
-  if (completion_results_.empty())
+  if (!IsCompleting())
     return;
 
   if (started) {

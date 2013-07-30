@@ -63,6 +63,8 @@ class LineEditor {
   // registered first.
   void RegisterCompleter(Completer completer);
 
+  bool IsCompleting() const;
+
  private:
   void RedrawConsole();
   int FindBackwards(int start_at, const char* until);
