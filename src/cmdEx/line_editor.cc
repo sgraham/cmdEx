@@ -50,6 +50,10 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       return kIncomplete;
     } else if (!alt_down && !ctrl_down && vk == VK_RETURN) {
       line_ += L"\x0d\x0a";
+      int x, y;
+      console_->GetCursorLocation(&x, &y);
+      // TODO: Scrolling seems to work, but I'm not sure why.
+      console_->SetCursorLocation(0, y + 1);
       return kReturnToCmd;
     } else if (!alt_down && !ctrl_down && vk == VK_ESCAPE) {
       line_ = L"";

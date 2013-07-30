@@ -341,8 +341,23 @@ TEST_F(LineEditorTest, CtrlD) {
   EXPECT_EQ(buf, std::wstring(L"exit\x0d\x0a"));
 }
 
+TEST_F(LineEditorTest, EnteringCommandHasNewline) {
+  TypeLetters("wee");
+  EXPECT_EQ(LineEditor::kReturnToCmd,
+            le.HandleKeyEvent(true, false, false, false, '\x0d', 0, VK_RETURN));
+  EXPECT_EQ(0, console.cursor_x);
+  EXPECT_EQ(1, console.cursor_y);
+  EXPECT_EQ('w', console.GetCharAt(0, 0));
+  EXPECT_EQ('e', console.GetCharAt(1, 0));
+  EXPECT_EQ('e', console.GetCharAt(2, 0));
+
+  wchar_t buf[256];
+  unsigned long num_chars;
+  le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
+  EXPECT_EQ(buf, std::wstring(L"wee\x0d\x0a"));
+}
 // F8, PgUp, PgDown, Up, Down for command history
-// Ctrl-C
+// Ctrl-C to break line
 // Tab complete {file, dir, branch }
 // Some intelligence for when to complete which things (md, cd, git <stuff>)
 // Ctrl-V to paste
