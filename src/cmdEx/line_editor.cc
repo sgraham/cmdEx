@@ -67,6 +67,8 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       int from = FindBackwards(position_, " ");
       line_.erase(from, position_ - from);
       position_ = from;
+    } else if (!alt_down && !ctrl_down && vk == VK_TAB) {
+      TabComplete(!shift_down);
     } else if (!alt_down && ctrl_down && vk == VK_BACK) {
       int from = FindBackwards(position_, " /\\");
       line_.erase(from, position_ - from);
@@ -107,6 +109,10 @@ void LineEditor::ToCmdBuffer(wchar_t* buffer,
   }
 }
 
+void LineEditor::RegisterCompleter(Completer completer) {
+  completers_.push_back(completer);
+}
+
 void LineEditor::RedrawConsole() {
   int width = console_->GetWidth();
   CHECK(width > 0);
@@ -139,4 +145,50 @@ int LineEditor::FindBackwards(int start_at, const char* until) {
     result--;
   result++;
   return result;
+}
+
+void LineEditor::TabComplete(bool forward_cycle) {
+  bool started = false;
+  if (completion_results_.empty()) {
+    for (std::vector<Completer>::const_iterator i(completers_.begin());
+        i != completers_.end();
+        ++i) {
+      if ((*i)(line_,
+               position_,
+               &completion_results_,
+               &completion_word_started_begin_)) {
+        // We'll be completing from begin_ to position_ subbing in results_.
+        // position_ is updated over time, so old end isn't saved.
+        started = true;
+        break;
+      }
+      completion_results_.empty();
+      completion_word_started_begin_ = -1;
+    }
+  }
+
+  if (completion_results_.empty())
+    return;
+
+  if (started) {
+    completion_index_ = forward_cycle ? 0 : completion_results_.size() - 1;
+  } else {
+    completion_index_ += forward_cycle ? 1 : -1;
+    if (completion_index_ < 0)
+      completion_index_ = completion_results_.size() - 1;
+    else if (completion_index_ >= static_cast<int>(completion_results_.size()))
+      completion_index_ = 0;
+  }
+
+  // Remove the old one (or the stub of one if we just started).
+  line_.erase(completion_word_started_begin_,
+      position_ - completion_word_started_begin_);
+  position_ = completion_word_started_begin_;
+
+  // Insert the new one.
+  line_.insert(completion_word_started_begin_,
+               completion_results_[completion_index_]);
+  position_ = completion_word_started_begin_ +
+              completion_results_[completion_index_].size();
+  RedrawConsole();
 }

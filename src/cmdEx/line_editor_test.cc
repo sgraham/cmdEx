@@ -356,9 +356,82 @@ TEST_F(LineEditorTest, EnteringCommandHasNewline) {
   le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
   EXPECT_EQ(buf, std::wstring(L"wee\x0d\x0a"));
 }
+
+bool MockCompleterBasic(const std::wstring& line,
+                        int position,
+                        std::vector<std::wstring>* results,
+                        int* completion_start) {
+  EXPECT_EQ(L"hi ab", line);
+  EXPECT_EQ(5, position);
+  *completion_start = 3;
+  results->push_back(L"abxxx");
+  results->push_back(L"abyyyyy");
+  results->push_back(L"abz");
+  return true;
+}
+
+TEST_F(LineEditorTest, CompleteBasic) {
+  le.RegisterCompleter(MockCompleterBasic);
+  TypeLetters("hi ab");
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, VK_TAB, 0, VK_TAB));
+  EXPECT_EQ(8, console.cursor_x);
+  EXPECT_EQ('h', console.GetCharAt(0, 0));
+  EXPECT_EQ('i', console.GetCharAt(1, 0));
+  EXPECT_EQ(' ', console.GetCharAt(2, 0));
+  EXPECT_EQ('a', console.GetCharAt(3, 0));
+  EXPECT_EQ('b', console.GetCharAt(4, 0));
+  EXPECT_EQ('x', console.GetCharAt(5, 0));
+  EXPECT_EQ('x', console.GetCharAt(6, 0));
+  EXPECT_EQ('x', console.GetCharAt(7, 0));
+  EXPECT_EQ(' ', console.GetCharAt(8, 0));
+
+  // Cycle next.
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, VK_TAB, 0, VK_TAB));
+  EXPECT_EQ(10, console.cursor_x);
+  EXPECT_EQ('h', console.GetCharAt(0, 0));
+  EXPECT_EQ('i', console.GetCharAt(1, 0));
+  EXPECT_EQ(' ', console.GetCharAt(2, 0));
+  EXPECT_EQ('a', console.GetCharAt(3, 0));
+  EXPECT_EQ('b', console.GetCharAt(4, 0));
+  EXPECT_EQ('y', console.GetCharAt(5, 0));
+  EXPECT_EQ('y', console.GetCharAt(6, 0));
+  EXPECT_EQ('y', console.GetCharAt(7, 0));
+  EXPECT_EQ('y', console.GetCharAt(8, 0));
+  EXPECT_EQ('y', console.GetCharAt(9, 0));
+  EXPECT_EQ(' ', console.GetCharAt(10, 0));
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, VK_TAB, 0, VK_TAB));
+  EXPECT_EQ(6, console.cursor_x);
+  EXPECT_EQ('h', console.GetCharAt(0, 0));
+  EXPECT_EQ('i', console.GetCharAt(1, 0));
+  EXPECT_EQ(' ', console.GetCharAt(2, 0));
+  EXPECT_EQ('a', console.GetCharAt(3, 0));
+  EXPECT_EQ('b', console.GetCharAt(4, 0));
+  EXPECT_EQ('z', console.GetCharAt(5, 0));
+  EXPECT_EQ(' ', console.GetCharAt(6, 0));
+
+  // Cycle loop.
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, VK_TAB, 0, VK_TAB));
+  EXPECT_EQ(8, console.cursor_x);
+  EXPECT_EQ('h', console.GetCharAt(0, 0));
+  EXPECT_EQ('i', console.GetCharAt(1, 0));
+  EXPECT_EQ(' ', console.GetCharAt(2, 0));
+  EXPECT_EQ('a', console.GetCharAt(3, 0));
+  EXPECT_EQ('b', console.GetCharAt(4, 0));
+  EXPECT_EQ('x', console.GetCharAt(5, 0));
+  EXPECT_EQ('x', console.GetCharAt(6, 0));
+  EXPECT_EQ('x', console.GetCharAt(7, 0));
+  EXPECT_EQ(' ', console.GetCharAt(8, 0));
+}
+
 // F8, PgUp, PgDown, Up, Down for command history
 // Ctrl-C to break line
-// Tab complete {file, dir, branch }
+// Tab complete {file, dir, branch}
 // Some intelligence for when to complete which things (md, cd, git <stuff>)
 // Ctrl-V to paste
 // Ctrl-Y (?) to copy line

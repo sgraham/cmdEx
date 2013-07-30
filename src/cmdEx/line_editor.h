@@ -6,6 +6,7 @@
 #define CMDEX_LINE_EDITOR_H_
 
 #include <string>
+#include <vector>
 
 class DirectoryHistory;
 
@@ -19,9 +20,22 @@ class ConsoleInterface {
   virtual void SetCursorLocation(int x, int y) = 0;
 };
 
+// Return false if |line| and |position| isn't a good match, otherwise fill
+// out |results|.
+typedef bool (*Completer)(const std::wstring& line,
+                          int position,
+                          std::vector<std::wstring>* results,
+                          int* completion_start);
+
 class LineEditor {
  public:
-  LineEditor() : console_(NULL), position_(0) {}
+  LineEditor()
+      : console_(NULL),
+        start_x_(0),
+        start_y_(0),
+        position_(0),
+        history_(NULL),
+        completion_index_(-1) {}
 
   // Called initially and on each editing resumption. |history| is not owned.
   void Init(ConsoleInterface* console, DirectoryHistory* history);
@@ -45,9 +59,14 @@ class LineEditor {
                    unsigned long buffer_size,
                    unsigned long* num_chars);
 
+  // So tests can inject non-filesystem ones. More specific ones should be
+  // registered first.
+  void RegisterCompleter(Completer completer);
+
  private:
   void RedrawConsole();
   int FindBackwards(int start_at, const char* until);
+  void TabComplete(bool forward_cycle);
 
   ConsoleInterface* console_;
   int start_x_;
@@ -56,6 +75,12 @@ class LineEditor {
   int position_;
   std::wstring fake_command_;
   DirectoryHistory* history_;  // Weak.
+
+  std::vector<Completer> completers_;
+
+  int completion_word_started_begin_;
+  int completion_index_;
+  std::vector<std::wstring> completion_results_;
 };
 
 #endif  // CMDEX_LINE_EDITOR_H_
