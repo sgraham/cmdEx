@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include "cmdEx/completion.h"
+
 class DirectoryHistory;
 
 class ConsoleInterface {
@@ -19,13 +21,6 @@ class ConsoleInterface {
   virtual void FillChar(wchar_t ch, int count, int x, int y) = 0;
   virtual void SetCursorLocation(int x, int y) = 0;
 };
-
-// Return false if |line| and |position| isn't a good match, otherwise fill
-// out |results|.
-typedef bool (*Completer)(const std::wstring& line,
-                          int position,
-                          std::vector<std::wstring>* results,
-                          int* completion_start);
 
 class LineEditor {
  public:
