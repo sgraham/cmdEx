@@ -312,13 +312,25 @@ bool GitCommandNameCompleter(const std::wstring& line,
                              int position,
                              std::vector<std::wstring>* results,
                              int* completion_start) {
-  if (line[0] == L'g' && line[1] == L'i' && line[2] == 't' && line[3] == ' ' &&
-      position == 4) {
-    *completion_start = 4;
-    for (size_t i = 0; i < ARRAYSIZE(kGitCommandsPorcelain); ++i) {
-      results->push_back(kGitCommandsPorcelain[i]);
+  if (line[0] == L'g' && line[1] == L'i' && line[2] == 't' && line[3] == ' ') {
+    std::vector<WordData> word_data;
+    CompletionBreakIntoWords(line, &word_data);
+    if (word_data.size() == 1 && position == 4) {
+      *completion_start = 4;
+      for (size_t i = 0; i < ARRAYSIZE(kGitCommandsPorcelain); ++i)
+        results->push_back(kGitCommandsPorcelain[i]);
+      return true;
+    } else if (CompletionWordIndex(word_data, position) == 1) {
+      *completion_start = word_data[1].original_offset;
+      for (size_t i = 0; i < ARRAYSIZE(kGitCommandsPorcelain); ++i) {
+        const std::wstring& beginning = word_data[1].deescaped_word;
+        if (std::wstring(kGitCommandsPorcelain[i])
+                .substr(0, beginning.size()) == beginning) {
+          results->push_back(kGitCommandsPorcelain[i]);
+        }
+      }
+      return true;
     }
-    return true;
   }
   return false;
 }
@@ -372,7 +384,7 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
   // - ctrl-arrow skipping
   // - tab completion
   // And could add:
-  // - smarter tab completion (. prefixes, git branches, etc.)
+  // - smarter tab completion (. prefixes, git branches, PATH, etc.)
   // - Alt-Up
   // - Alt-Left for "back" (save at each prompt)
   // - history across sessions with better history search

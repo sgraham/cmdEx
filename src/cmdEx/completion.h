@@ -18,13 +18,14 @@ typedef bool (*Completer)(const std::wstring& line,
 
 // |word| will not have any of its escape characters interpreted.
 struct WordData {
-  std::wstring word;
+  std::wstring original_word;
   int original_offset;
+  std::wstring deescaped_word;
 };
 
 void CompletionBreakIntoWords(const std::wstring& line,
                               std::vector<WordData>* word_data);
 
-int CompletionWordIndex(const std::wstring& line, int position);
+int CompletionWordIndex(const std::vector<WordData>& word_data, int position);
 
 #endif  // CMDEX_COMPLETION_H_

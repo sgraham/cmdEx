@@ -4,15 +4,21 @@
 
 #include "cmdEx/completion.h"
 
+#include <windows.h>
+
+#include "common/util.h"
+
+#pragma comment(lib, "shell32.lib")
+
 static void CopyArg(const wchar_t* line_start,
                     const wchar_t* arg_start,
                     const wchar_t* arg_end,
                     std::vector<WordData>* word_data) {
   WordData wd;
   wd.original_offset = arg_start - line_start;
-  wd.word.reserve(arg_end - arg_start);
+  wd.original_word.reserve(arg_end - arg_start);
   for (const wchar_t* i = arg_start; i != arg_end; ++i)
-    wd.word.push_back(*i);
+    wd.original_word.push_back(*i);
   word_data->push_back(wd);
 }
 
@@ -92,8 +98,22 @@ void CompletionBreakIntoWords(const std::wstring& line,
   }
   if (arg_start != p)
     CopyArg(line_start, arg_start, p, word_data);
+
+  int num_args;
+  LPWSTR* escaped = CommandLineToArgvW(line_start, &num_args);
+  CHECK(num_args == static_cast<int>(word_data->size()));
+  for (int i = 0; i < num_args; ++i) {
+    word_data->at(i).deescaped_word = escaped[i];
+  }
+  LocalFree(escaped);
 }
 
-int CompletionWordIndex(const std::wstring& line, int position) {
-  return -1;
+int CompletionWordIndex(const std::vector<WordData>& word_data, int position) {
+  int result = -1;
+  for (const auto& i : word_data) {
+    if (position < i.original_offset)
+      break;
+    ++result;
+  }
+  return result;
 }

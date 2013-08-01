@@ -164,6 +164,7 @@ int LineEditor::FindBackwards(int start_at, const char* until) {
 void LineEditor::TabComplete(bool forward_cycle) {
   bool started = false;
   if (!IsCompleting()) {
+    completion_results_.clear();
     for (std::vector<Completer>::const_iterator i(completers_.begin());
         i != completers_.end();
         ++i) {
