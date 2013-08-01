@@ -119,8 +119,100 @@ TEST(CompletionTest, BreakIntoWordsBackslashQuoteSpaced) {
   EXPECT_EQ(L"after", words[5].original_word);
 }
 
+TEST(CompletionTest, BreakIntoWordsDoubleQuotes) {
+  std::vector<WordData> words;
+  CompletionBreakIntoWords(L"exe two\"\"quotes after", &words);
+  EXPECT_EQ(3, words.size());
+  EXPECT_EQ(L"exe", words[0].original_word);
+  EXPECT_EQ(L"two\"\"quotes", words[1].original_word);
+  EXPECT_EQ(L"twoquotes", words[1].deescaped_word);
+  EXPECT_EQ(L"after", words[2].original_word);
+}
+
+TEST(CompletionTest, BreakIntoWordsTripleQuotes) {
+  std::vector<WordData> words;
+  CompletionBreakIntoWords(L"exe three\"\"\"quotes after", &words);
+  EXPECT_EQ(3, words.size());
+  EXPECT_EQ(L"exe", words[0].original_word);
+  EXPECT_EQ(L"three\"\"\"quotes", words[1].original_word);
+  EXPECT_EQ(L"three\"quotes", words[1].deescaped_word);
+  EXPECT_EQ(L"after", words[2].original_word);
+}
+
+TEST(CompletionTest, BreakIntoWordsQuadrupleQuotes) {
+  std::vector<WordData> words;
+  CompletionBreakIntoWords(L"exe four\"\"\"\" quotes\" after", &words);
+  EXPECT_EQ(3, words.size());
+  EXPECT_EQ(L"exe", words[0].original_word);
+  EXPECT_EQ(L"four\"\"\"\" quotes\"", words[1].original_word);
+  EXPECT_EQ(L"four\" quotes", words[1].deescaped_word);
+  EXPECT_EQ(L"after", words[2].original_word);
+}
+
+TEST(CompletionTest, BreakIntoWordsQuintupleQuotes) {
+  std::vector<WordData> words;
+  CompletionBreakIntoWords(L"exe five\"\"\"\"\"quotes after", &words);
+  EXPECT_EQ(3, words.size());
+  EXPECT_EQ(L"exe", words[0].original_word);
+  EXPECT_EQ(L"five\"\"\"\"\"quotes", words[1].original_word);
+  EXPECT_EQ(L"five\"quotes", words[1].deescaped_word);
+  EXPECT_EQ(L"after", words[2].original_word);
+}
+
+TEST(CompletionTest, BreakIntoWordsHextupleQuotes) {
+  std::vector<WordData> words;
+  CompletionBreakIntoWords(L"exe six\"\"\"\"\"\"quotes after", &words);
+  EXPECT_EQ(3, words.size());
+  EXPECT_EQ(L"exe", words[0].original_word);
+  EXPECT_EQ(L"six\"\"\"\"\"\"quotes", words[1].original_word);
+  EXPECT_EQ(L"six\"\"quotes", words[1].deescaped_word);
+  EXPECT_EQ(L"after", words[2].original_word);
+}
+
+TEST(CompletionTest, BreakIntoWordsSextupleQuotes) {
+  std::vector<WordData> words;
+  CompletionBreakIntoWords(L"exe six\"\"\"\"\"\"quotes after", &words);
+  EXPECT_EQ(3, words.size());
+  EXPECT_EQ(L"exe", words[0].original_word);
+  EXPECT_EQ(L"six\"\"\"\"\"\"quotes", words[1].original_word);
+  EXPECT_EQ(L"six\"\"quotes", words[1].deescaped_word);
+  EXPECT_EQ(L"after", words[2].original_word);
+}
+
+TEST(CompletionTest, BreakIntoWordsSeptupleQuotes) {
+  std::vector<WordData> words;
+  CompletionBreakIntoWords(L"exe seven\"\"\"\"\"\"\" quotes\" after", &words);
+  EXPECT_EQ(3, words.size());
+  EXPECT_EQ(L"exe", words[0].original_word);
+  EXPECT_EQ(L"seven\"\"\"\"\"\"\" quotes\"", words[1].original_word);
+  EXPECT_EQ(L"seven\"\" quotes", words[1].deescaped_word);
+  EXPECT_EQ(L"after", words[2].original_word);
+}
+
+TEST(CompletionTest, BreakIntoWordsDuodectupleQuotes) {
+  std::vector<WordData> words;
+  CompletionBreakIntoWords(L"exe twelve\"\"\"\"\"\"\"\"\"\"\"\"quotes after",
+                           &words);
+  EXPECT_EQ(3, words.size());
+  EXPECT_EQ(L"exe", words[0].original_word);
+  EXPECT_EQ(L"twelve\"\"\"\"\"\"\"\"\"\"\"\"quotes", words[1].original_word);
+  EXPECT_EQ(L"twelve\"\"\"\"quotes", words[1].deescaped_word);
+  EXPECT_EQ(L"after", words[2].original_word);
+}
+
+// Had to bust out Wikipedia for that name.
+TEST(CompletionTest, BreakIntoWordsTredectupleQuotes) {
+  std::vector<WordData> words;
+  CompletionBreakIntoWords(
+      L"exe thirteen\"\"\"\"\"\"\"\"\"\"\"\"\" quotes\" after", &words);
+  EXPECT_EQ(3, words.size());
+  EXPECT_EQ(L"exe", words[0].original_word);
+  EXPECT_EQ(L"thirteen\"\"\"\"\"\"\"\"\"\"\"\"\" quotes\"", words[1].original_word);
+  EXPECT_EQ(L"thirteen\"\"\"\" quotes", words[1].deescaped_word);
+  EXPECT_EQ(L"after", words[2].original_word);
+}
+
 // TODO
-// - triple quoting
 // - quotes inside quotes
 // - escaped quotes inside
 // - special executable handling
