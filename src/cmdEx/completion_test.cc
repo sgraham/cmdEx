@@ -207,12 +207,33 @@ TEST(CompletionTest, BreakIntoWordsTredectupleQuotes) {
       L"exe thirteen\"\"\"\"\"\"\"\"\"\"\"\"\" quotes\" after", &words);
   EXPECT_EQ(3, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
-  EXPECT_EQ(L"thirteen\"\"\"\"\"\"\"\"\"\"\"\"\" quotes\"", words[1].original_word);
+  EXPECT_EQ(L"thirteen\"\"\"\"\"\"\"\"\"\"\"\"\" quotes\"",
+            words[1].original_word);
   EXPECT_EQ(L"thirteen\"\"\"\" quotes", words[1].deescaped_word);
   EXPECT_EQ(L"after", words[2].original_word);
 }
 
+TEST(CompletionTest, BreakIntoWordsQuotedContainingTwoQuotes) {
+  std::vector<WordData> words;
+  CompletionBreakIntoWords(L"exe \"two\"\"quotes after", &words);
+  EXPECT_EQ(3, words.size());
+  EXPECT_EQ(L"exe", words[0].original_word);
+  EXPECT_EQ(L"\"two\"\"quotes", words[1].original_word);
+  EXPECT_EQ(L"two\"quotes", words[1].deescaped_word);
+  EXPECT_EQ(L"after", words[2].original_word);
+  EXPECT_EQ(L"after", words[2].deescaped_word);
+}
+
+TEST(CompletionTest, BreakIntoWordsEscapedConsecutiveQuotes) {
+  std::vector<WordData> words;
+  CompletionBreakIntoWords(L"exe \"the crazy \\\\\"\"\"\\\\\" quotes", &words);
+  EXPECT_EQ(3, words.size());
+  EXPECT_EQ(L"exe", words[0].original_word);
+  EXPECT_EQ(L"\"the crazy \\\\\"\"\"\\\\\"", words[1].original_word);
+  EXPECT_EQ(L"the crazy \\\"\\", words[1].deescaped_word);
+  EXPECT_EQ(L"quotes", words[2].original_word);
+  EXPECT_EQ(L"quotes", words[2].deescaped_word);
+}
+
 // TODO
-// - quotes inside quotes
-// - escaped quotes inside
 // - special executable handling

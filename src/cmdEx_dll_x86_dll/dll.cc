@@ -219,9 +219,6 @@ void* RvaToAddr(void* base, unsigned int rva) {
   return reinterpret_cast<char*>(rva) + reinterpret_cast<uintptr_t>(base);
 }
 
-static wchar_t g_saved_text[20<<10];
-static int g_saved_text_length;
-
 // Directory history navigation. Given a directory history like this (from
 // oldest to newest):
 //
@@ -416,12 +413,6 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
     // because we'll be doing interactive editing while things are redirected.
     //CHECK(conout == GetStdHandle(STD_OUTPUT_HANDLE));
     *chars_read = 0;
-    // Restore if we let cmd reprompt while editing this line.
-    if (g_saved_text_length) {
-      *chars_read = g_saved_text_length;
-      memcpy(buffer, g_saved_text, g_saved_text_length * sizeof(wchar_t));
-      g_saved_text_length = 0;
-    }
     if (!g_directory_history) {
       RealWorkingDirectory* working_directory = new RealWorkingDirectory;
       g_directory_history = new DirectoryHistory(working_directory);
