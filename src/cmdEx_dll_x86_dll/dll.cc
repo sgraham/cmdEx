@@ -297,7 +297,7 @@ class RealConsole : public ConsoleInterface {
   HANDLE console_;
 };
 
-const wchar_t* kGitCommandsPorcelain[] = {
+static const wchar_t* kGitCommandsPorcelain[] = {
   L"add", L"am", L"archive", L"bisect", L"branch", L"bundle", L"checkout",
   L"cherry-pick", L"citool", L"clean", L"clone", L"commit", L"describe",
   L"diff", L"fetch", L"format-patch", L"gc", L"grep", L"gui", L"init", L"log",
@@ -305,26 +305,23 @@ const wchar_t* kGitCommandsPorcelain[] = {
   L"rm", L"shortlog", L"show", L"stash", L"status", L"submodule", L"tag",
 };
 
-bool GitCommandNameCompleter(const std::wstring& line,
+static bool GitCommandNameCompleter(const std::wstring& line,
                              int position,
                              std::vector<std::wstring>* results,
                              int* completion_start) {
   if (line[0] == L'g' && line[1] == L'i' && line[2] == 't' && line[3] == ' ') {
     std::vector<WordData> word_data;
     CompletionBreakIntoWords(line, &word_data);
-    if (word_data.size() == 1 && position == 4) {
-      *completion_start = 4;
-      for (size_t i = 0; i < ARRAYSIZE(kGitCommandsPorcelain); ++i)
-        results->push_back(kGitCommandsPorcelain[i]);
-      return true;
-    } else if (CompletionWordIndex(word_data, position) == 1) {
-      *completion_start = word_data[1].original_offset;
+    bool in_word_one = CompletionWordIndex(word_data, position) == 1;
+    bool no_command = word_data.size() == 1 && position == 4;
+    if (no_command || in_word_one) {
+      *completion_start = no_command ? 4 : word_data[1].original_offset;
+      const std::wstring prefix =
+          no_command ? L"" : word_data[1].deescaped_word;
       for (size_t i = 0; i < ARRAYSIZE(kGitCommandsPorcelain); ++i) {
-        const std::wstring& beginning = word_data[1].deescaped_word;
-        if (std::wstring(kGitCommandsPorcelain[i])
-                .substr(0, beginning.size()) == beginning) {
-          results->push_back(kGitCommandsPorcelain[i]);
-        }
+        std::wstring tmp = kGitCommandsPorcelain[i];
+        if (tmp.substr(0, prefix.size()) == prefix)
+          results->push_back(tmp);
       }
       return true;
     }
@@ -332,6 +329,33 @@ bool GitCommandNameCompleter(const std::wstring& line,
   return false;
 }
 
+static void SearchPathByPrefix(const std::wstring& prefix,
+                               std::vector<std::wstring>* results) {
+}
+
+static bool CommandInPathCompleter(const std::wstring& line,
+                                   int position,
+                                   std::vector<std::wstring>* results,
+                                   int* completion_start) {
+  std::vector<WordData> word_data;
+  CompletionBreakIntoWords(line, &word_data);
+  bool in_word_zero = CompletionWordIndex(word_data, position) == 0;
+  if (word_data.empty() || in_word_zero) {
+    *completion_start = word_data.empty() ? 0 : word_data[0].original_offset;
+    const std::wstring prefix =
+        word_data.empty() ? L"" : word_data[0].deescaped_word;
+    SearchPathByPrefix(prefix, results);
+    return !results.empty();
+  }
+  return false;
+}
+
+bool DirectoryCompleter(const std::wstring& line,
+                        int position,
+                        std::vector<std::wstring>* results,
+                        int* completion_start) {
+  return false;
+}
 
 static DirectoryHistory* g_directory_history;
 
@@ -420,6 +444,8 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
     if (!g_editor) {
       g_editor = new LineEditor;
       g_editor->RegisterCompleter(GitCommandNameCompleter);
+      g_editor->RegisterCompleter(CommandInPathCompleter);
+      g_editor->RegisterCompleter(DirectoryCompleter);
     }
     g_real_console.SetConsole(conout);
     g_editor->Init(&g_real_console, g_directory_history);
