@@ -9,16 +9,16 @@ namespace {
 
 class MockWorkingDirectory : public WorkingDirectoryInterface {
  public:
-  bool Set(const std::string& dir) override {
+  bool Set(const string& dir) override {
     dir_ = dir;
     return true;
   }
-  std::string Get() override {
+  string Get() override {
     return dir_;
   }
 
  private:
-  std::string dir_;
+  string dir_;
 };
 
 }  // namespace

@@ -68,16 +68,16 @@ class LineEditor {
   ConsoleInterface* console_;
   int start_x_;
   int start_y_;
-  std::wstring line_;
+  wstring line_;
   int position_;
-  std::wstring fake_command_;
+  wstring fake_command_;
   DirectoryHistory* history_;  // Weak.
 
-  std::vector<Completer> completers_;
+  vector<Completer> completers_;
 
   int completion_word_started_begin_;
   int completion_index_;
-  std::vector<std::wstring> completion_results_;
+  vector<wstring> completion_results_;
 };
 
 #endif  // CMDEX_LINE_EDITOR_H_

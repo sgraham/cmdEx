@@ -7,11 +7,12 @@
 
 #include <string>
 #include <vector>
+using namespace std;
 
 class WorkingDirectoryInterface {
  public:
-  virtual bool Set(const std::string& dir) = 0;
-  virtual std::string Get() = 0;
+  virtual bool Set(const string& dir) = 0;
+  virtual string Get() = 0;
 };
 
 class DirectoryHistory {
@@ -32,8 +33,8 @@ class DirectoryHistory {
   bool CommitLastKnown();
 
   WorkingDirectoryInterface* working_dir_;
-  std::vector<std::string> dirs_;
-  std::string last_known_;
+  vector<string> dirs_;
+  string last_known_;
   int position_;
 };
 

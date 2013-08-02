@@ -14,7 +14,7 @@ DirectoryHistory::DirectoryHistory(WorkingDirectoryInterface* working_dir)
 }
 
 void DirectoryHistory::StartingEdit() {
-  std::string current = working_dir_->Get();
+  string current = working_dir_->Get();
   if (last_known_ != current) {
     CommitLastKnown();
     last_known_ = current;
@@ -29,8 +29,8 @@ bool DirectoryHistory::NavigateInHistory(int direction) {
   }
   int original = position_;
   position_ += direction;
-  position_ = std::max(position_, 0);
-  position_ = std::min(position_, static_cast<int>(dirs_.size() - 1));
+  position_ = max(position_, 0);
+  position_ = min(position_, static_cast<int>(dirs_.size() - 1));
   // TODO: If a directory has since been removed, remove from history list,
   // and either go to the next or say something maybe?
   working_dir_->Set(dirs_[position_]);
@@ -39,9 +39,7 @@ bool DirectoryHistory::NavigateInHistory(int direction) {
 }
 
 bool DirectoryHistory::CommitLastKnown() {
-  for (std::vector<std::string>::const_iterator i(dirs_.begin());
-       i != dirs_.end();
-       ++i) {
+  for (vector<string>::const_iterator i(dirs_.begin()); i != dirs_.end(); ++i) {
     if (*i == last_known_) {
       dirs_.erase(i);
       break;

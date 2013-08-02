@@ -10,14 +10,14 @@
 // http://source.winehq.org/git/wine.git/blob/HEAD:/dlls/shell32/tests/shlexec.c
 
 TEST(CompletionTest, BreakIntoWordsNoArgs) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe", &words);
   EXPECT_EQ(1, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
 }
 
 TEST(CompletionTest, BreakIntoWordsBasicQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe a b \"c d\" 'e f` g\\ h)", &words);
   EXPECT_EQ(8, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
@@ -31,7 +31,7 @@ TEST(CompletionTest, BreakIntoWordsBasicQuotes) {
 }
 
 TEST(CompletionTest, BreakIntoWordsQuotesInArgs) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe a\"b\" \"c\"d e", &words);
   EXPECT_EQ(4, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
@@ -41,7 +41,7 @@ TEST(CompletionTest, BreakIntoWordsQuotesInArgs) {
 }
 
 TEST(CompletionTest, BreakIntoWordsUnclosedQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe a \"b", &words);
   EXPECT_EQ(3, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
@@ -50,7 +50,7 @@ TEST(CompletionTest, BreakIntoWordsUnclosedQuotes) {
 }
 
 TEST(CompletionTest, BreakIntoWordsStandaloneQuote) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe a \"", &words);
   EXPECT_EQ(3, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
@@ -59,7 +59,7 @@ TEST(CompletionTest, BreakIntoWordsStandaloneQuote) {
 }
 
 TEST(CompletionTest, BreakIntoWordsOnlySpaceAndTab) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe a\tb\rc\nd\ve\ff", &words);
   EXPECT_EQ(3, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
@@ -68,7 +68,7 @@ TEST(CompletionTest, BreakIntoWordsOnlySpaceAndTab) {
 }
 
 TEST(CompletionTest, BreakIntoWordsBackslashNoQuote) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe o\\ne t\\\\wo t\\\\\\hree f\\\\\\\\our",
                            &words);
   EXPECT_EQ(5, words.size());
@@ -80,7 +80,7 @@ TEST(CompletionTest, BreakIntoWordsBackslashNoQuote) {
 }
 
 TEST(CompletionTest, BreakIntoWordsBackslashNoQuoteInQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(
       L"exe \"o\\ne\" \"t\\\\wo\" \"t\\\\\\hree\" \"f\\\\\\\\our\"", &words);
   EXPECT_EQ(5, words.size());
@@ -92,7 +92,7 @@ TEST(CompletionTest, BreakIntoWordsBackslashNoQuoteInQuotes) {
 }
 
 TEST(CompletionTest, BreakIntoWordsBackslashQuote) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(
       L"exe \\\"one \\\\\"two\" \\\\\\\"three \\\\\\\\\"four\" after", &words);
   EXPECT_EQ(6, words.size());
@@ -105,7 +105,7 @@ TEST(CompletionTest, BreakIntoWordsBackslashQuote) {
 }
 
 TEST(CompletionTest, BreakIntoWordsBackslashQuoteSpaced) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(
       L"exe \"one\\\" still\" \"two\\\\\" \"three\\\\\\\" still\" " \
       L"\"four\\\\\\\\\" after",
@@ -120,7 +120,7 @@ TEST(CompletionTest, BreakIntoWordsBackslashQuoteSpaced) {
 }
 
 TEST(CompletionTest, BreakIntoWordsDoubleQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe two\"\"quotes after", &words);
   EXPECT_EQ(3, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
@@ -130,7 +130,7 @@ TEST(CompletionTest, BreakIntoWordsDoubleQuotes) {
 }
 
 TEST(CompletionTest, BreakIntoWordsTripleQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe three\"\"\"quotes after", &words);
   EXPECT_EQ(3, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
@@ -140,7 +140,7 @@ TEST(CompletionTest, BreakIntoWordsTripleQuotes) {
 }
 
 TEST(CompletionTest, BreakIntoWordsQuadrupleQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe four\"\"\"\" quotes\" after", &words);
   EXPECT_EQ(3, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
@@ -150,7 +150,7 @@ TEST(CompletionTest, BreakIntoWordsQuadrupleQuotes) {
 }
 
 TEST(CompletionTest, BreakIntoWordsQuintupleQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe five\"\"\"\"\"quotes after", &words);
   EXPECT_EQ(3, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
@@ -160,7 +160,7 @@ TEST(CompletionTest, BreakIntoWordsQuintupleQuotes) {
 }
 
 TEST(CompletionTest, BreakIntoWordsHextupleQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe six\"\"\"\"\"\"quotes after", &words);
   EXPECT_EQ(3, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
@@ -170,7 +170,7 @@ TEST(CompletionTest, BreakIntoWordsHextupleQuotes) {
 }
 
 TEST(CompletionTest, BreakIntoWordsSextupleQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe six\"\"\"\"\"\"quotes after", &words);
   EXPECT_EQ(3, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
@@ -180,7 +180,7 @@ TEST(CompletionTest, BreakIntoWordsSextupleQuotes) {
 }
 
 TEST(CompletionTest, BreakIntoWordsSeptupleQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe seven\"\"\"\"\"\"\" quotes\" after", &words);
   EXPECT_EQ(3, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
@@ -190,7 +190,7 @@ TEST(CompletionTest, BreakIntoWordsSeptupleQuotes) {
 }
 
 TEST(CompletionTest, BreakIntoWordsDuodectupleQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe twelve\"\"\"\"\"\"\"\"\"\"\"\"quotes after",
                            &words);
   EXPECT_EQ(3, words.size());
@@ -202,7 +202,7 @@ TEST(CompletionTest, BreakIntoWordsDuodectupleQuotes) {
 
 // Had to bust out Wikipedia for that name.
 TEST(CompletionTest, BreakIntoWordsTredectupleQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(
       L"exe thirteen\"\"\"\"\"\"\"\"\"\"\"\"\" quotes\" after", &words);
   EXPECT_EQ(3, words.size());
@@ -214,7 +214,7 @@ TEST(CompletionTest, BreakIntoWordsTredectupleQuotes) {
 }
 
 TEST(CompletionTest, BreakIntoWordsQuotedContainingTwoQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe \"two\"\"quotes after", &words);
   EXPECT_EQ(3, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);
@@ -225,7 +225,7 @@ TEST(CompletionTest, BreakIntoWordsQuotedContainingTwoQuotes) {
 }
 
 TEST(CompletionTest, BreakIntoWordsEscapedConsecutiveQuotes) {
-  std::vector<WordData> words;
+  vector<WordData> words;
   CompletionBreakIntoWords(L"exe \"the crazy \\\\\"\"\"\\\\\" quotes", &words);
   EXPECT_EQ(3, words.size());
   EXPECT_EQ(L"exe", words[0].original_word);

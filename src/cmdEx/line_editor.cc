@@ -88,9 +88,9 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
         return kIncomplete;
       line_.erase(position_, 1);
     } else if (!alt_down && !ctrl_down && vk == VK_LEFT) {
-      position_ = std::max(0, position_ - 1);
+      position_ = max(0, position_ - 1);
     } else if (!alt_down && !ctrl_down && vk == VK_RIGHT) {
-      position_ = std::min(static_cast<int>(line_.size()), position_ + 1);
+      position_ = min(static_cast<int>(line_.size()), position_ + 1);
     } else if ((!alt_down && !ctrl_down && vk == VK_HOME) ||
                (!alt_down && ctrl_down && vk == 'A')) {
       position_ = 0;
@@ -135,7 +135,7 @@ void LineEditor::RedrawConsole() {
   int offset = 0;
   for (;;) {
     int num_chars_to_draw =
-        std::min(width - x, static_cast<int>(line_.size()) - offset);
+        min(width - x, static_cast<int>(line_.size()) - offset);
     console_->DrawString(&line_[offset], num_chars_to_draw, x, y);
     if (position_ >= offset && position_ < offset + num_chars_to_draw)
       console_->SetCursorLocation(position_ - offset + x, y);
@@ -165,7 +165,7 @@ void LineEditor::TabComplete(bool forward_cycle) {
   bool started = false;
   if (!IsCompleting()) {
     completion_results_.clear();
-    for (std::vector<Completer>::const_iterator i(completers_.begin());
+    for (vector<Completer>::const_iterator i(completers_.begin());
         i != completers_.end();
         ++i) {
       completion_results_.empty();

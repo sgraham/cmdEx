@@ -13,7 +13,7 @@
 static void CopyArg(const wchar_t* line_start,
                     const wchar_t* arg_start,
                     const wchar_t* arg_end,
-                    std::vector<WordData>* word_data) {
+                    vector<WordData>* word_data) {
   WordData wd;
   wd.original_offset = arg_start - line_start;
   wd.original_word.reserve(arg_end - arg_start);
@@ -41,8 +41,8 @@ static void SkipWhitespace(const wchar_t*& p) {
 //   3n+1 -> n, and close string
 //   3n+2 -> n+1 and close string
 
-void CompletionBreakIntoWords(const std::wstring& line,
-                              std::vector<WordData>* word_data) {
+void CompletionBreakIntoWords(const wstring& line,
+                              vector<WordData>* word_data) {
   if (line.empty())
     return;
 
@@ -108,7 +108,7 @@ void CompletionBreakIntoWords(const std::wstring& line,
   LocalFree(escaped);
 }
 
-int CompletionWordIndex(const std::vector<WordData>& word_data, int position) {
+int CompletionWordIndex(const vector<WordData>& word_data, int position) {
   int result = -1;
   for (const auto& i : word_data) {
     if (position < i.original_offset)

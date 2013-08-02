@@ -13,16 +13,16 @@ namespace {
 
 class MockWorkingDirectory : public WorkingDirectoryInterface {
  public:
-  bool Set(const std::string& dir) override {
+  bool Set(const string& dir) override {
     dir_ = dir;
     return true;
   }
-  std::string Get() override {
+  string Get() override {
     return dir_;
   }
 
  private:
-  std::string dir_;
+  string dir_;
 };
 
 class MockConsoleInterface : public ConsoleInterface {
@@ -102,7 +102,7 @@ TEST_F(LineEditorTest, AltUp) {
   wchar_t buf[256];
   unsigned long num_chars;
   le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
-  EXPECT_EQ(buf, std::wstring(L"cd..\x0d\x0a"));
+  EXPECT_EQ(buf, wstring(L"cd..\x0d\x0a"));
 }
 
 TEST_F(LineEditorTest, EndCommand) {
@@ -112,7 +112,7 @@ TEST_F(LineEditorTest, EndCommand) {
   wchar_t buf[256];
   unsigned long num_chars;
   le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
-  EXPECT_EQ(buf, std::wstring(L"abc\x0d\x0a"));
+  EXPECT_EQ(buf, wstring(L"abc\x0d\x0a"));
 }
 
 TEST_F(LineEditorTest, CursorArrowSingleLine) {
@@ -305,7 +305,7 @@ TEST_F(LineEditorTest, ClearScreen) {
   wchar_t buf[256];
   unsigned long num_chars;
   le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
-  EXPECT_EQ(buf, std::wstring(L"cls\x0d\x0a"));
+  EXPECT_EQ(buf, wstring(L"cls\x0d\x0a"));
 }
 
 TEST_F(LineEditorTest, EscClearLine) {
@@ -338,7 +338,7 @@ TEST_F(LineEditorTest, CtrlD) {
   wchar_t buf[256];
   unsigned long num_chars;
   le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
-  EXPECT_EQ(buf, std::wstring(L"exit\x0d\x0a"));
+  EXPECT_EQ(buf, wstring(L"exit\x0d\x0a"));
 }
 
 TEST_F(LineEditorTest, EnteringCommandHasNewline) {
@@ -354,12 +354,12 @@ TEST_F(LineEditorTest, EnteringCommandHasNewline) {
   wchar_t buf[256];
   unsigned long num_chars;
   le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
-  EXPECT_EQ(buf, std::wstring(L"wee\x0d\x0a"));
+  EXPECT_EQ(buf, wstring(L"wee\x0d\x0a"));
 }
 
-bool MockCompleterBasic(const std::wstring& line,
+bool MockCompleterBasic(const wstring& line,
                         int position,
-                        std::vector<std::wstring>* results,
+                        vector<wstring>* results,
                         int* completion_start) {
   EXPECT_EQ(L"hi ab", line);
   EXPECT_EQ(5, position);

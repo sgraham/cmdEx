@@ -7,25 +7,26 @@
 
 #include <string>
 #include <vector>
+using namespace std;
 
 // Return false if |line| and |position| isn't a good match, otherwise fill
 // out |results|. |completion_start| is the offset of the word that's being
 // completed.
-typedef bool (*Completer)(const std::wstring& line,
+typedef bool (*Completer)(const wstring& line,
                           int position,
-                          std::vector<std::wstring>* results,
+                          vector<wstring>* results,
                           int* completion_start);
 
 // |word| will not have any of its escape characters interpreted.
 struct WordData {
-  std::wstring original_word;
+  wstring original_word;
   int original_offset;
-  std::wstring deescaped_word;
+  wstring deescaped_word;
 };
 
-void CompletionBreakIntoWords(const std::wstring& line,
-                              std::vector<WordData>* word_data);
+void CompletionBreakIntoWords(const wstring& line,
+                              vector<WordData>* word_data);
 
-int CompletionWordIndex(const std::vector<WordData>& word_data, int position);
+int CompletionWordIndex(const vector<WordData>& word_data, int position);
 
 #endif  // CMDEX_COMPLETION_H_

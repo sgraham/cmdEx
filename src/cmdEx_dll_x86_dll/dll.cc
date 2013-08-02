@@ -45,24 +45,24 @@ GIT2_FUNCTIONS
 DBGHELP_FUNCTIONS
 #undef X
 
-bool IsDirectory(const std::string& path) {
+bool IsDirectory(const string& path) {
   struct _stat buffer;
   return _stat(path.c_str(), &buffer) == 0 && (buffer.st_mode & _S_IFDIR);
 }
 
-bool IsFile(const std::string& path) {
+bool IsFile(const string& path) {
   struct _stat buffer;
   return _stat(path.c_str(), &buffer) == 0 && (buffer.st_mode & _S_IFREG);
 }
 
-std::string JoinPath(const std::string& a, const std::string& b) {
+string JoinPath(const string& a, const string& b) {
   // TODO: normpath.
   return a + "/" + b;
 }
 
 // Reads |path| into |buffer| which is assumed to be large enough to hold
 // _MAX_PATH. Trailing spaces are trimmed.
-void ReadInto(const std::string& path, char* buffer) {
+void ReadInto(const string& path, char* buffer) {
   FILE *fp = fopen(path.c_str(), "rb");
   if (!fp) {
     buffer[0] = 0;
@@ -243,10 +243,10 @@ void* RvaToAddr(void* base, unsigned int rva) {
 
 class RealWorkingDirectory : public WorkingDirectoryInterface {
  public:
-  virtual bool Set(const std::string& dir) override {
+  virtual bool Set(const string& dir) override {
     return SetCurrentDirectory(dir.c_str());
   }
-  virtual std::string Get() override {
+  virtual string Get() override {
     char cur_path[_MAX_PATH];
     if (GetCurrentDirectory(sizeof(cur_path), cur_path))
       return cur_path;
@@ -305,21 +305,21 @@ static const wchar_t* kGitCommandsPorcelain[] = {
   L"rm", L"shortlog", L"show", L"stash", L"status", L"submodule", L"tag",
 };
 
-static bool GitCommandNameCompleter(const std::wstring& line,
+static bool GitCommandNameCompleter(const wstring& line,
                              int position,
-                             std::vector<std::wstring>* results,
+                             vector<wstring>* results,
                              int* completion_start) {
   if (line[0] == L'g' && line[1] == L'i' && line[2] == 't' && line[3] == ' ') {
-    std::vector<WordData> word_data;
+    vector<WordData> word_data;
     CompletionBreakIntoWords(line, &word_data);
     bool in_word_one = CompletionWordIndex(word_data, position) == 1;
     bool no_command = word_data.size() == 1 && position == 4;
     if (no_command || in_word_one) {
       *completion_start = no_command ? 4 : word_data[1].original_offset;
-      const std::wstring prefix =
+      const wstring prefix =
           no_command ? L"" : word_data[1].deescaped_word;
       for (size_t i = 0; i < ARRAYSIZE(kGitCommandsPorcelain); ++i) {
-        std::wstring tmp = kGitCommandsPorcelain[i];
+        wstring tmp = kGitCommandsPorcelain[i];
         if (tmp.substr(0, prefix.size()) == prefix)
           results->push_back(tmp);
       }
@@ -329,30 +329,30 @@ static bool GitCommandNameCompleter(const std::wstring& line,
   return false;
 }
 
-static void SearchPathByPrefix(const std::wstring& prefix,
-                               std::vector<std::wstring>* results) {
+static void SearchPathByPrefix(const wstring& prefix,
+                               vector<wstring>* results) {
 }
 
-static bool CommandInPathCompleter(const std::wstring& line,
+static bool CommandInPathCompleter(const wstring& line,
                                    int position,
-                                   std::vector<std::wstring>* results,
+                                   vector<wstring>* results,
                                    int* completion_start) {
-  std::vector<WordData> word_data;
+  vector<WordData> word_data;
   CompletionBreakIntoWords(line, &word_data);
   bool in_word_zero = CompletionWordIndex(word_data, position) == 0;
   if (word_data.empty() || in_word_zero) {
     *completion_start = word_data.empty() ? 0 : word_data[0].original_offset;
-    const std::wstring prefix =
+    const wstring prefix =
         word_data.empty() ? L"" : word_data[0].deescaped_word;
     SearchPathByPrefix(prefix, results);
-    return !results.empty();
+    return !results->empty();
   }
   return false;
 }
 
-bool DirectoryCompleter(const std::wstring& line,
+bool DirectoryCompleter(const wstring& line,
                         int position,
-                        std::vector<std::wstring>* results,
+                        vector<wstring>* results,
                         int* completion_start) {
   return false;
 }
