@@ -16,6 +16,7 @@
 
 #include "cmdEx/directory_history.h"
 #include "cmdEx/line_editor.h"
+#include "cmdEx/string_util.h"
 #include "common/util.h"
 #include "git2.h"
 
@@ -57,7 +58,12 @@ bool IsFile(const string& path) {
 
 string JoinPath(const string& a, const string& b) {
   // TODO: normpath.
-  return a + "/" + b;
+  return a + "\\" + b;
+}
+
+wstring JoinPath(const wstring& a, const wstring& b) {
+  // TODO: normpath.
+  return a + L"\\" + b;
 }
 
 // Reads |path| into |buffer| which is assumed to be large enough to hold
@@ -321,7 +327,7 @@ static bool GitCommandNameCompleter(const wstring& line,
       for (size_t i = 0; i < ARRAYSIZE(kGitCommandsPorcelain); ++i) {
         wstring tmp = kGitCommandsPorcelain[i];
         if (tmp.substr(0, prefix.size()) == prefix)
-          results->push_back(tmp);
+          results->push_back(tmp + L" ");
       }
       return true;
     }
@@ -331,6 +337,33 @@ static bool GitCommandNameCompleter(const wstring& line,
 
 static void SearchPathByPrefix(const wstring& prefix,
                                vector<wstring>* results) {
+  const wchar_t* path_var = _wgetenv(L"PATH");
+  if (!path_var)
+    return;
+  const wchar_t* path_ext_var = _wgetenv(L"PATHEXT");
+  if (!path_ext_var)
+    return;
+  CHECK(wcschr(path_var, L'"') == NULL);
+  vector<wstring> paths = StringSplit(path_var, L';');
+  vector<wstring> pathexts = StringSplit(path_ext_var, L';');
+  for (const auto& path : paths) {
+    for (const auto& pathext : pathexts) {
+      WIN32_FIND_DATAW find_data;
+      HANDLE handle =
+          FindFirstFileW(JoinPath(path, L"*" + pathext).c_str(), &find_data);
+      if (handle != INVALID_HANDLE_VALUE) {
+        do {
+          wstring tmp = find_data.cFileName;
+          if (tmp.substr(0, prefix.size()) == prefix) {
+            // Strip pathext because it's ugly looking.
+            results->push_back(tmp.substr(0, tmp.size() - pathext.size()) +
+                               L" ");
+          }
+        } while (FindNextFileW(handle, &find_data));
+        CloseHandle(handle);
+      }
+    }
+  }
 }
 
 static bool CommandInPathCompleter(const wstring& line,
