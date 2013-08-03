@@ -366,7 +366,6 @@ static void SearchPathByPrefix(const wstring& prefix,
   }
 }
 
-// TODO: If word 0 has a slash or dot, don't do this.
 static bool CommandInPathCompleter(const wstring& line,
                                    int position,
                                    vector<wstring>* results,
@@ -374,6 +373,14 @@ static bool CommandInPathCompleter(const wstring& line,
   vector<WordData> word_data;
   CompletionBreakIntoWords(line, &word_data);
   bool in_word_zero = CompletionWordIndex(word_data, position) == 0;
+  if (in_word_zero) {
+    // If there's a slash in the word, the search will fail anyway, but early
+    // out so that we don't do a lot of FindFile'ing for no reason.
+    if (word_data[0].deescaped_word.find(L"\\") != string::npos ||
+        word_data[0].deescaped_word.find(L"/") != string::npos) {
+      return false;
+    }
+  }
   if (word_data.empty() || in_word_zero) {
     *completion_start = word_data.empty() ? 0 : word_data[0].original_offset;
     const wstring prefix =
