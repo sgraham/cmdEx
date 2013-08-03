@@ -366,6 +366,7 @@ static void SearchPathByPrefix(const wstring& prefix,
   }
 }
 
+// TODO: If word 0 has a slash or dot, don't do this.
 static bool CommandInPathCompleter(const wstring& line,
                                    int position,
                                    vector<wstring>* results,
