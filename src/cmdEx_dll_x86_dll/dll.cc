@@ -356,16 +356,18 @@ static void SearchPathByPrefix(const wstring& prefix,
           wstring tmp = find_data.cFileName;
           if (tmp.substr(0, prefix.size()) == prefix) {
             // Strip pathext because it's ugly looking.
+            // TODO: Quoting.
             results->push_back(tmp.substr(0, tmp.size() - pathext.size()) +
                                L" ");
           }
         } while (FindNextFileW(handle, &find_data));
-        CloseHandle(handle);
+        FindClose(handle);
       }
     }
   }
 }
 
+// TODO: cmd builtins.
 static bool CommandInPathCompleter(const wstring& line,
                                    int position,
                                    vector<wstring>* results,
@@ -391,10 +393,102 @@ static bool CommandInPathCompleter(const wstring& line,
   return false;
 }
 
+// TODO: Normalize the other way when git is word[0].
+static wstring NormalizeSlashes(const wstring& path) {
+  wstring result;
+  bool in_slashes = false;
+  for (size_t i = 0; i < path.size(); ++i) {
+    if (path[i] == L'\\' || path[i] == L'/') {
+      if (in_slashes)
+        continue;
+      in_slashes = true;
+      result.push_back(L'\\');
+    } else {
+      in_slashes = false;
+      result.push_back(path[i]);
+    }
+  }
+  return result;
+}
+
+static void FindFiles(const wstring& prefix,
+                      bool dir_only,
+                      vector<wstring>* results) {
+  wchar_t drive[MAX_PATH];
+  wchar_t dir[MAX_PATH];
+  wchar_t file[MAX_PATH];
+  wchar_t ext[MAX_PATH];
+  wstring prepend;
+  _wsplitpath(prefix.c_str(), drive, dir, file, ext);
+
+  wstring search_prefix = prefix;
+  if (drive[0] != 0 && dir[0] == 0 && file[0] == 0 && ext[0] == 0) {
+    // For drive-only, we need to add a slash, otherwise it's interpreted as
+    // current directory on that drive rather than the root.
+    search_prefix = prefix + L"\\";
+  }
+
+  if (drive[0] != 0) {
+    prepend = drive;
+    if (prepend[prepend.size() - 1] != L'\\')
+      prepend.push_back(L'\\');
+  }
+  if (dir[0] != 0)
+    prepend += dir;
+  prepend = NormalizeSlashes(prepend);
+
+
+  WIN32_FIND_DATAW find_data;
+  HANDLE handle = FindFirstFileW((search_prefix + L"*").c_str(), &find_data);
+  if (handle != INVALID_HANDLE_VALUE) {
+    do {
+      // We could keep these but generally they're not too useful.
+      if (find_data.cFileName[0] == L'.' &&
+          (find_data.cFileName[1] == 0 ||
+           (find_data.cFileName[1] == L'.' && find_data.cFileName[2] == 0)))
+        continue;
+      if (!dir_only || (dir_only && (find_data.dwFileAttributes &
+                                     FILE_ATTRIBUTE_DIRECTORY))) {
+        // TODO: Quoting.
+        if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+          results->push_back(prepend + find_data.cFileName + L"\\");
+        else
+          results->push_back(prepend + find_data.cFileName);
+      }
+    } while (FindNextFileW(handle, &find_data));
+    FindClose(handle);
+  }
+}
+
 bool DirectoryCompleter(const wstring& line,
                         int position,
                         vector<wstring>* results,
                         int* completion_start) {
+  vector<WordData> word_data;
+  CompletionBreakIntoWords(line, &word_data);
+  if (word_data.size() < 1)
+    return false;
+  const wstring& command = word_data[0].deescaped_word;
+  if (command == L"md" || command == L"rd" || command == L"cd" ||
+      command == L"mkdir" || command == L"rmdir" || command == L"chdir") {
+    bool in_word_one = CompletionWordIndex(word_data, position) == 1;
+    if (word_data.size() == 1 || in_word_one) {
+      const wstring prefix =
+          word_data.size() == 1 ? L"" : word_data[1].deescaped_word;
+      FindFiles(prefix, true, results);
+      *completion_start =
+          word_data.size() == 1 ? word_data[0].original_word.size() + 1
+                                : word_data[1].original_offset;
+      return !results->empty();
+    }
+  }
+  return false;
+}
+
+bool FilenameCompleter(const wstring& line,
+                       int position,
+                       vector<wstring>* results,
+                       int* completion_start) {
   return false;
 }
 
@@ -487,6 +581,7 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
       g_editor->RegisterCompleter(GitCommandNameCompleter);
       g_editor->RegisterCompleter(CommandInPathCompleter);
       g_editor->RegisterCompleter(DirectoryCompleter);
+      g_editor->RegisterCompleter(FilenameCompleter);
     }
     g_real_console.SetConsole(conout);
     g_editor->Init(&g_real_console, g_directory_history);
