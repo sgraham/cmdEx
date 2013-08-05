@@ -335,6 +335,16 @@ static bool GitCommandNameCompleter(const wstring& line,
   return false;
 }
 
+// Everything in "help" that "where" doesn't find.
+const wchar_t* kCmdBuiltins[] = {
+  L"assoc", L"break", L"bcdedit", L"call", L"cd", L"chdir", L"cls", L"color",
+  L"copy", L"date", L"del", L"dir", L"echo", L"endlocal", L"erase", L"exit",
+  L"for", L"ftype", L"goto", L"graftabl", L"if", L"md", L"mkdir", L"mklink",
+  L"move", L"path", L"pause", L"popd", L"prompt", L"pushd", L"rd", L"rem",
+  L"ren", L"rename", L"rmdir", L"set", L"setlocal", L"shift", L"start", L"time",
+  L"title", L"type", L"ver", L"verify", L"vol",
+};
+
 static void SearchPathByPrefix(const wstring& prefix,
                                vector<wstring>* results) {
   const wchar_t* path_var = _wgetenv(L"PATH");
@@ -346,6 +356,11 @@ static void SearchPathByPrefix(const wstring& prefix,
   CHECK(wcschr(path_var, L'"') == NULL);
   vector<wstring> paths = StringSplit(path_var, L';');
   vector<wstring> pathexts = StringSplit(path_ext_var, L';');
+  for (const auto& builtin : kCmdBuiltins) {
+    wstring as_str(builtin);
+    if (as_str.substr(0, prefix.size()) == prefix)
+      results->push_back(as_str + L" ");  // Don't need quoting here.
+  }
   for (const auto& path : paths) {
     for (const auto& pathext : pathexts) {
       WIN32_FIND_DATAW find_data;
@@ -367,7 +382,6 @@ static void SearchPathByPrefix(const wstring& prefix,
   }
 }
 
-// TODO: cmd builtins.
 static bool CommandInPathCompleter(const wstring& line,
                                    int position,
                                    vector<wstring>* results,
