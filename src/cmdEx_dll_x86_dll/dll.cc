@@ -408,7 +408,7 @@ static bool CommandInPathCompleter(const wstring& line,
 }
 
 // TODO: Normalize the other way when git is word[0].
-static wstring NormalizeSlashes(const wstring& path) {
+static wstring NormalizeSlashes(const wstring& path, bool command_is_git) {
   wstring result;
   bool in_slashes = false;
   for (size_t i = 0; i < path.size(); ++i) {
@@ -416,7 +416,7 @@ static wstring NormalizeSlashes(const wstring& path) {
       if (in_slashes)
         continue;
       in_slashes = true;
-      result.push_back(L'\\');
+      result.push_back(command_is_git ? L'/' : L'\\');
     } else {
       in_slashes = false;
       result.push_back(path[i]);
@@ -427,6 +427,7 @@ static wstring NormalizeSlashes(const wstring& path) {
 
 static void FindFiles(const wstring& prefix,
                       bool dir_only,
+                      bool command_is_git,
                       vector<wstring>* results) {
   wchar_t drive[MAX_PATH];
   wchar_t dir[MAX_PATH];
@@ -449,7 +450,7 @@ static void FindFiles(const wstring& prefix,
   }
   if (dir[0] != 0)
     prepend += dir;
-  prepend = NormalizeSlashes(prepend);
+  prepend = NormalizeSlashes(prepend, command_is_git);
 
 
   WIN32_FIND_DATAW find_data;
@@ -465,7 +466,8 @@ static void FindFiles(const wstring& prefix,
                                      FILE_ATTRIBUTE_DIRECTORY))) {
         // TODO: Quoting.
         if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-          results->push_back(prepend + find_data.cFileName + L"\\");
+          results->push_back(prepend + find_data.cFileName +
+                             (command_is_git ? L"/" : L"\\"));
         else
           results->push_back(prepend + find_data.cFileName);
       }
@@ -489,7 +491,7 @@ bool DirectoryCompleter(const wstring& line,
     if (word_data.size() == 1 || in_word_one) {
       const wstring prefix =
           word_data.size() == 1 ? L"" : word_data[1].deescaped_word;
-      FindFiles(prefix, true, results);
+      FindFiles(prefix, true, false, results);
       *completion_start =
           word_data.size() == 1 ? word_data[0].original_word.size() + 1
                                 : word_data[1].original_offset;
@@ -508,7 +510,10 @@ bool FilenameCompleter(const wstring& line,
   int index = CompletionWordIndex(word_data, position);
   const wstring prefix =
       word_data.empty() ? L"" : word_data[index].deescaped_word;
-  FindFiles(prefix, false, results);
+  FindFiles(prefix,
+            false,
+            word_data.size() >= 1 && word_data[0].deescaped_word == L"git",
+            results);
   *completion_start = word_data.empty() ? 0 : word_data[index].original_offset;
   return !results->empty();
 }
