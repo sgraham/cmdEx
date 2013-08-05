@@ -513,6 +513,46 @@ TEST_F(LineEditorTest, TabCompleteStopsAfterNonTab) {
   EXPECT_FALSE(le.IsCompleting());
 }
 
+bool MockCompleterInMiddle(const wstring& line,
+                        int position,
+                        vector<wstring>* results,
+                        int* completion_start) {
+  EXPECT_EQ(L"hi ab cdefghi", line);
+  EXPECT_EQ(4, position);
+  *completion_start = 3;
+  results->push_back(L"abxxx");
+  results->push_back(L"abyyyyy");
+  results->push_back(L"abz");
+  return true;
+}
+
+TEST_F(LineEditorTest, TabCompleteInMiddle) {
+  le.RegisterCompleter(MockCompleterInMiddle);
+  TypeLetters("hi ab cdefghi");
+
+  // Back to 'b'.
+  for (int i = 0; i < 9; ++i) {
+    EXPECT_EQ(
+        LineEditor::kIncomplete,
+        le.HandleKeyEvent(true, false, false, false, VK_LEFT, 0, VK_LEFT));
+  }
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, VK_TAB, 0, VK_TAB));
+  EXPECT_TRUE(le.IsCompleting());
+  EXPECT_EQ(8, console.cursor_x);
+  EXPECT_EQ('h', console.GetCharAt(0, 0));
+  EXPECT_EQ('i', console.GetCharAt(1, 0));
+  EXPECT_EQ(' ', console.GetCharAt(2, 0));
+  EXPECT_EQ('a', console.GetCharAt(3, 0));
+  EXPECT_EQ('b', console.GetCharAt(4, 0));
+  EXPECT_EQ('x', console.GetCharAt(5, 0));
+  EXPECT_EQ('x', console.GetCharAt(6, 0));
+  EXPECT_EQ('x', console.GetCharAt(7, 0));
+  EXPECT_EQ(' ', console.GetCharAt(8, 0));
+  EXPECT_EQ('c', console.GetCharAt(9, 0));
+  EXPECT_EQ('d', console.GetCharAt(10, 0));
+}
+
 // F8, PgUp, PgDown, Up, Down for command history
 // Ctrl-C to break line
 // Tab complete {file, dir, branch}
