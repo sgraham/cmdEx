@@ -503,7 +503,14 @@ bool FilenameCompleter(const wstring& line,
                        int position,
                        vector<wstring>* results,
                        int* completion_start) {
-  return false;
+  vector<WordData> word_data;
+  CompletionBreakIntoWords(line, &word_data);
+  int index = CompletionWordIndex(word_data, position);
+  const wstring prefix =
+      word_data.empty() ? L"" : word_data[index].deescaped_word;
+  FindFiles(prefix, false, results);
+  *completion_start = word_data.empty() ? 0 : word_data[index].original_offset;
+  return !results->empty();
 }
 
 static DirectoryHistory* g_directory_history;
