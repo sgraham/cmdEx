@@ -303,6 +303,8 @@ class RealConsole : public ConsoleInterface {
   HANDLE console_;
 };
 
+// TODO: Search for git-xyz in path too. Should include .sh in addition to
+// PATHEXT
 static const wchar_t* kGitCommandsPorcelain[] = {
   L"add", L"am", L"archive", L"bisect", L"branch", L"bundle", L"checkout",
   L"cherry-pick", L"citool", L"clean", L"clone", L"commit", L"describe",
@@ -326,6 +328,47 @@ static bool GitCommandNameCompleter(const CompleterInput& input,
           results->push_back(tmp + L" ");
       }
       return true;
+    }
+  }
+  return false;
+}
+
+// See:
+// https://github.com/git/git/blob/master/contrib/completion/git-completion.bash#L342
+static bool GitRefsHelper(const CompleterInput& input,
+                          vector<wstring>* results) {
+  CHECK(input.word_data.size() > 2 &&
+        input.word_data[0].deescaped_word == L"git");
+  return false;
+}
+
+// ... must all be L"", NULL terminated. Returns true iff results is filled
+// out.
+static bool CompleteFlagsIfInLongArg(const CompleterInput& input,
+                                     vector<wstring>* results,
+                                     ...) {
+  return false;
+}
+
+static bool GitCommandArgCompleter(const CompleterInput& input,
+                                   vector<wstring>* results) {
+  if (input.word_data.size() > 2 &&
+      input.word_data[0].deescaped_word == L"git") {
+    if (input.word_data[1].deescaped_word == L"checkout") {
+      if (CompleteFlagsIfInLongArg(input,
+                                   results,
+                                   L"--quiet",
+                                   L"--ours",
+                                   L"--theirs",
+                                   L"--no-track",
+                                   L"--merge",
+                                   L"--conflict=",
+                                   L"--orphan",
+                                   L"--patch",
+                                   NULL))
+        return true;
+      if (GitRefsHelper(input, results))
+        return true;
     }
   }
   return false;
@@ -583,6 +626,7 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
     if (!g_editor) {
       g_editor = new LineEditor;
       g_editor->RegisterCompleter(GitCommandNameCompleter);
+      g_editor->RegisterCompleter(GitCommandArgCompleter);
       g_editor->RegisterCompleter(CommandInPathCompleter);
       g_editor->RegisterCompleter(DirectoryCompleter);
       g_editor->RegisterCompleter(FilenameCompleter);
