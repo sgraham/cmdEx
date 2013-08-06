@@ -311,19 +311,15 @@ static const wchar_t* kGitCommandsPorcelain[] = {
   L"rm", L"shortlog", L"show", L"stash", L"status", L"submodule", L"tag",
 };
 
-static bool GitCommandNameCompleter(const wstring& line,
-                             int position,
-                             vector<wstring>* results,
-                             int* completion_start) {
-  if (line[0] == L'g' && line[1] == L'i' && line[2] == 't' && line[3] == ' ') {
-    vector<WordData> word_data;
-    CompletionBreakIntoWords(line, &word_data);
-    bool in_word_one = CompletionWordIndex(word_data, position) == 1;
-    bool no_command = word_data.size() == 1 && position == 4;
+static bool GitCommandNameCompleter(const CompleterInput& input,
+                                    vector<wstring>* results) {
+  if (input.word_data.size() > 1 &&
+      input.word_data[0].deescaped_word == L"git") {
+    bool in_word_one = input.word_index == 1;
+    bool no_command = input.word_data.size() == 1;
     if (no_command || in_word_one) {
-      *completion_start = no_command ? 4 : word_data[1].original_offset;
       const wstring prefix =
-          no_command ? L"" : word_data[1].deescaped_word;
+          no_command ? L"" : input.word_data[1].deescaped_word;
       for (size_t i = 0; i < ARRAYSIZE(kGitCommandsPorcelain); ++i) {
         wstring tmp = kGitCommandsPorcelain[i];
         if (tmp.substr(0, prefix.size()) == prefix)
@@ -336,7 +332,7 @@ static bool GitCommandNameCompleter(const wstring& line,
 }
 
 // Everything in "help" that "where" doesn't find.
-const wchar_t* kCmdBuiltins[] = {
+static const wchar_t* kCmdBuiltins[] = {
   L"assoc", L"break", L"bcdedit", L"call", L"cd", L"chdir", L"cls", L"color",
   L"copy", L"date", L"del", L"dir", L"echo", L"endlocal", L"erase", L"exit",
   L"for", L"ftype", L"goto", L"graftabl", L"if", L"md", L"mkdir", L"mklink",
@@ -382,32 +378,26 @@ static void SearchPathByPrefix(const wstring& prefix,
   }
 }
 
-static bool CommandInPathCompleter(const wstring& line,
-                                   int position,
-                                   vector<wstring>* results,
-                                   int* completion_start) {
-  vector<WordData> word_data;
-  CompletionBreakIntoWords(line, &word_data);
-  bool in_word_zero = CompletionWordIndex(word_data, position) == 0;
+static bool CommandInPathCompleter(const CompleterInput& input,
+                                   vector<wstring>* results) {
+  bool in_word_zero = input.word_index == 0;
   if (in_word_zero) {
     // If there's a slash in the word, the search will fail anyway, but early
     // out so that we don't do a lot of FindFile'ing for no reason.
-    if (word_data[0].deescaped_word.find(L"\\") != string::npos ||
-        word_data[0].deescaped_word.find(L"/") != string::npos) {
+    if (input.word_data[0].deescaped_word.find(L"\\") != string::npos ||
+        input.word_data[0].deescaped_word.find(L"/") != string::npos) {
       return false;
     }
   }
-  if (word_data.empty() || in_word_zero) {
-    *completion_start = word_data.empty() ? 0 : word_data[0].original_offset;
+  if (input.word_data.empty() || in_word_zero) {
     const wstring prefix =
-        word_data.empty() ? L"" : word_data[0].deescaped_word;
+        input.word_data.empty() ? L"" : input.word_data[0].deescaped_word;
     SearchPathByPrefix(prefix, results);
     return !results->empty();
   }
   return false;
 }
 
-// TODO: Normalize the other way when git is word[0].
 static wstring NormalizeSlashes(const wstring& path, bool command_is_git) {
   wstring result;
   bool in_slashes = false;
@@ -452,7 +442,6 @@ static void FindFiles(const wstring& prefix,
     prepend += dir;
   prepend = NormalizeSlashes(prepend, command_is_git);
 
-
   WIN32_FIND_DATAW find_data;
   HANDLE handle = FindFirstFileW((search_prefix + L"*").c_str(), &find_data);
   if (handle != INVALID_HANDLE_VALUE) {
@@ -476,45 +465,34 @@ static void FindFiles(const wstring& prefix,
   }
 }
 
-bool DirectoryCompleter(const wstring& line,
-                        int position,
-                        vector<wstring>* results,
-                        int* completion_start) {
-  vector<WordData> word_data;
-  CompletionBreakIntoWords(line, &word_data);
-  if (word_data.size() < 1)
+static bool DirectoryCompleter(const CompleterInput& input,
+                               vector<wstring>* results) {
+  if (input.word_data.size() < 1)
     return false;
-  const wstring& command = word_data[0].deescaped_word;
+  const wstring& command = input.word_data[0].deescaped_word;
   if (command == L"md" || command == L"rd" || command == L"cd" ||
       command == L"mkdir" || command == L"rmdir" || command == L"chdir") {
-    bool in_word_one = CompletionWordIndex(word_data, position) == 1;
-    if (word_data.size() == 1 || in_word_one) {
+    bool in_word_one = input.word_index == 1;
+    if (input.word_data.size() == 1 || in_word_one) {
       const wstring prefix =
-          word_data.size() == 1 ? L"" : word_data[1].deescaped_word;
+          input.word_data.size() == 1 ? L"" : input.word_data[1].deescaped_word;
       FindFiles(prefix, true, false, results);
-      *completion_start =
-          word_data.size() == 1 ? word_data[0].original_word.size() + 1
-                                : word_data[1].original_offset;
       return !results->empty();
     }
   }
   return false;
 }
 
-bool FilenameCompleter(const wstring& line,
-                       int position,
-                       vector<wstring>* results,
-                       int* completion_start) {
-  vector<WordData> word_data;
-  CompletionBreakIntoWords(line, &word_data);
-  int index = CompletionWordIndex(word_data, position);
-  const wstring prefix =
-      word_data.empty() ? L"" : word_data[index].deescaped_word;
+static bool FilenameCompleter(const CompleterInput& input,
+                              vector<wstring>* results) {
+  const wstring prefix = input.word_data.empty()
+                             ? L""
+                             : input.word_data[input.word_index].deescaped_word;
   FindFiles(prefix,
             false,
-            word_data.size() >= 1 && word_data[0].deescaped_word == L"git",
+            input.word_data.size() >= 1 &&
+                input.word_data[0].deescaped_word == L"git",
             results);
-  *completion_start = word_data.empty() ? 0 : word_data[index].original_offset;
   return !results->empty();
 }
 

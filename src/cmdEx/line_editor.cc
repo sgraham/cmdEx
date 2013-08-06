@@ -28,10 +28,10 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
     // Assume that it's not going to continue, and let tab handling put it
     // back on if it did continue. TODO: We hang on to results until next
     // completion which is kind of dumb.
-    int previous_completion_begin = completion_word_started_begin_;
+    int previous_completion_begin = completion_word_begin_;
     // TODO: This test sucks, need a better way to determine mode.
     if (vk != VK_SHIFT && vk != VK_CONTROL && vk != VK_MENU)
-      completion_word_started_begin_ = -1;
+      completion_word_begin_ = -1;
 
     if (alt_down && !ctrl_down && vk == VK_UP) {
       fake_command_ = L"cd..\x0d\x0a";
@@ -77,7 +77,7 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       position_ = from;
     } else if (!alt_down && !ctrl_down && vk == VK_TAB) {
       // We're continuing completion, keep it on.
-      completion_word_started_begin_ = previous_completion_begin;
+      completion_word_begin_ = previous_completion_begin;
       TabComplete(!shift_down);
     } else if (!alt_down && ctrl_down && vk == VK_BACK) {
       int from = FindBackwards(position_, " /\\");
@@ -124,7 +124,7 @@ void LineEditor::RegisterCompleter(Completer completer) {
 }
 
 bool LineEditor::IsCompleting() const {
-  return !completion_results_.empty() && completion_word_started_begin_ != -1;
+  return !completion_results_.empty() && completion_word_begin_ != -1;
 }
 
 void LineEditor::RedrawConsole() {
@@ -164,19 +164,24 @@ int LineEditor::FindBackwards(int start_at, const char* until) {
 void LineEditor::TabComplete(bool forward_cycle) {
   bool started = false;
   if (!IsCompleting()) {
-    completion_results_.clear();
+    CompleterInput input;
+    CompletionBreakIntoWords(line_, &input.word_data);
+    input.word_index = CompletionWordIndex(input.word_data, position_);
+    input.position_in_word =
+        position_ - input.word_data[input.word_index].original_offset;
     for (vector<Completer>::const_iterator i(completers_.begin());
         i != completers_.end();
         ++i) {
-      completion_results_.empty();
-      completion_word_started_begin_ = -1;
-      if ((*i)(line_,
-               position_,
-               &completion_results_,
-               &completion_word_started_begin_)) {
+      completion_results_.clear();
+      if ((*i)(input, &completion_results_)) {
         // We'll be completing from begin_ to position_ subbing in results_.
         // position_ is updated over time, so old end isn't saved.
         started = true;
+        completion_word_begin_ =
+            input.word_data[input.word_index].original_offset;
+        completion_word_end_ =
+            completion_word_begin_ +
+            input.word_data[input.word_index].original_word.size();
         break;
       }
     }
@@ -196,14 +201,14 @@ void LineEditor::TabComplete(bool forward_cycle) {
   }
 
   // Remove the old one (or the stub of one if we just started).
-  line_.erase(completion_word_started_begin_,
-      position_ - completion_word_started_begin_);
-  position_ = completion_word_started_begin_;
+  line_.erase(completion_word_begin_,
+              completion_word_end_ - completion_word_begin_);
+  position_ = completion_word_begin_;
 
   // Insert the new one.
-  line_.insert(completion_word_started_begin_,
-               completion_results_[completion_index_]);
-  position_ = completion_word_started_begin_ +
-              completion_results_[completion_index_].size();
+  line_.insert(completion_word_begin_, completion_results_[completion_index_]);
+  position_ =
+      completion_word_begin_ + completion_results_[completion_index_].size();
+  completion_word_end_ = position_;
   RedrawConsole();
 }

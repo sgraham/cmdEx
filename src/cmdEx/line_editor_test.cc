@@ -357,13 +357,11 @@ TEST_F(LineEditorTest, EnteringCommandHasNewline) {
   EXPECT_EQ(buf, wstring(L"wee\x0d\x0a"));
 }
 
-bool MockCompleterBasic(const wstring& line,
-                        int position,
-                        vector<wstring>* results,
-                        int* completion_start) {
-  EXPECT_EQ(L"hi ab", line);
-  EXPECT_EQ(5, position);
-  *completion_start = 3;
+bool MockCompleterBasic(const CompleterInput& input, vector<wstring>* results) {
+  EXPECT_EQ(L"hi", input.word_data[0].original_word);
+  EXPECT_EQ(L"ab", input.word_data[1].original_word);
+  EXPECT_EQ(1, input.word_index);
+  EXPECT_EQ(2, input.position_in_word);
   results->push_back(L"abxxx");
   results->push_back(L"abyyyyy");
   results->push_back(L"abz");
@@ -513,13 +511,13 @@ TEST_F(LineEditorTest, TabCompleteStopsAfterNonTab) {
   EXPECT_FALSE(le.IsCompleting());
 }
 
-bool MockCompleterInMiddle(const wstring& line,
-                        int position,
-                        vector<wstring>* results,
-                        int* completion_start) {
-  EXPECT_EQ(L"hi ab cdefghi", line);
-  EXPECT_EQ(4, position);
-  *completion_start = 3;
+bool MockCompleterInMiddle(const CompleterInput& input,
+                           vector<wstring>* results) {
+  EXPECT_EQ(L"hi", input.word_data[0].original_word);
+  EXPECT_EQ(L"ab", input.word_data[1].original_word);
+  EXPECT_EQ(L"cdefghi", input.word_data[2].original_word);
+  EXPECT_EQ(1, input.word_index);
+  EXPECT_EQ(1, input.position_in_word);
   results->push_back(L"abxxx");
   results->push_back(L"abyyyyy");
   results->push_back(L"abz");
@@ -557,6 +555,7 @@ TEST_F(LineEditorTest, TabCompleteInMiddle) {
 // Ctrl-C to break line
 // Tab complete {file, dir, branch}
 // Some intelligence for when to complete which things (md, cd, git <stuff>)
+// Sort complete results somehow
 // Ctrl-V to paste
 // Ctrl-Y (?) to copy line
 // Multiline probably crashes

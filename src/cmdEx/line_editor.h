@@ -75,7 +75,8 @@ class LineEditor {
 
   vector<Completer> completers_;
 
-  int completion_word_started_begin_;
+  int completion_word_begin_;
+  int completion_word_end_;
   int completion_index_;
   vector<wstring> completion_results_;
 };

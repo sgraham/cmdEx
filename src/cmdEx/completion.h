@@ -9,20 +9,22 @@
 #include <vector>
 using namespace std;
 
-// Return false if |line| and |position| isn't a good match, otherwise fill
-// out |results|. |completion_start| is the offset of the word that's being
-// completed.
-typedef bool (*Completer)(const wstring& line,
-                          int position,
-                          vector<wstring>* results,
-                          int* completion_start);
-
-// |word| will not have any of its escape characters interpreted.
+// |original_word| will not have any of its escape characters interpreted.
 struct WordData {
   wstring original_word;
   int original_offset;
   wstring deescaped_word;
 };
+
+struct CompleterInput {
+  vector<WordData> word_data;
+  int word_index;
+  int position_in_word;
+};
+
+// Return false if can't complete for |input|. Otherwise, fill out |results|.
+typedef bool (*Completer)(const CompleterInput& input,
+                          vector<wstring>* results);
 
 void CompletionBreakIntoWords(const wstring& line,
                               vector<WordData>* word_data);

@@ -22,9 +22,9 @@ static void CopyArg(const wchar_t* line_start,
   word_data->push_back(wd);
 }
 
-static void SkipWhitespace(const wchar_t*& p) {
-  while (*p == L' ' || *p == L'\t')
-    ++p;
+static void SkipWhitespace(const wchar_t** p) {
+  while (**p == L' ' || **p == L'\t')
+    ++(*p);
 }
 // We want to use CommandLineToArgvW here, but we need to be able to say in
 // which word and offset the given |position| in source falls into, and we
@@ -43,8 +43,11 @@ static void SkipWhitespace(const wchar_t*& p) {
 
 void CompletionBreakIntoWords(const wstring& line,
                               vector<WordData>* word_data) {
-  if (line.empty())
+  if (line.empty()) {
+    // See comment about appending empty arg at end of function.
+    CopyArg(NULL, NULL, NULL, word_data);
     return;
+  }
 
   const wchar_t* p = line.c_str();
   const wchar_t* line_start = p;
@@ -63,7 +66,7 @@ void CompletionBreakIntoWords(const wstring& line,
   CopyArg(line_start, arg_start, p, word_data);
 
   // Skip to the first argument.
-  SkipWhitespace(p);
+  SkipWhitespace(&p);
   arg_start = p;
 
   int num_active_quotes = 0;
@@ -73,7 +76,7 @@ void CompletionBreakIntoWords(const wstring& line,
       // We hit a space and aren't in an active quote, skip to the next
       // argument.
       CopyArg(line_start, arg_start, p, word_data);
-      SkipWhitespace(p);
+      SkipWhitespace(&p);
       arg_start = p;
       num_backslashes = 0;
     } else if (*p == L'\\') {
@@ -106,6 +109,15 @@ void CompletionBreakIntoWords(const wstring& line,
     word_data->at(i).deescaped_word = escaped[i];
   }
   LocalFree(escaped);
+
+  // If the cursor was spaced past the end of the last argument, add an empty
+  // argument so that calling code knows we're not on any word, past the end
+  // of existing arguments. Similarly if the command line is completely empty.
+  if (p - line_start >
+      static_cast<int>(word_data->at(num_args - 1).original_offset +
+                       word_data->at(num_args - 1).original_word.size())) {
+    CopyArg(line_start, p, p, word_data);
+  }
 }
 
 int CompletionWordIndex(const vector<WordData>& word_data, int position) {
