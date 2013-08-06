@@ -347,6 +347,7 @@ static bool GitRefsHelper(const CompleterInput& input,
 static bool CompleteFlagsIfInLongArg(const CompleterInput& input,
                                      vector<wstring>* results,
                                      ...) {
+  // TODO: Possibly push the prefix gunk up into line editor.
   return false;
 }
 
