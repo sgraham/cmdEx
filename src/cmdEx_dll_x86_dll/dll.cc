@@ -23,11 +23,13 @@
 #define GIT2_FUNCTIONS \
   X(git_branch_name) \
   X(git_oid_tostr) \
+  X(git_reference_foreach_glob) \
   X(git_reference_free) \
   X(git_reference_name) \
   X(git_reference_name_to_id) \
   X(git_reference_shorthand) \
   X(git_repository_discover) \
+  X(git_repository_free) \
   X(git_repository_head) \
   X(git_repository_open) \
 
@@ -128,6 +130,20 @@ void TrimRefsHead(char* head) {
     memmove(head, &head[length], strlen(&head[length]) + 1);
 }
 
+static bool FindGitRepo(char* git_dir,
+                        size_t git_dir_size,
+                        git_repository** repo) {
+  char local_path[_MAX_PATH];
+  if (GetCurrentDirectory(sizeof(local_path), local_path) == 0)
+    return false;
+  if (g_git_repository_discover(git_dir, git_dir_size, local_path, 0, "") !=
+      0)
+    return false;
+  if (g_git_repository_open(repo, git_dir) != 0)
+    return false;
+  return true;
+}
+
 // Replacement for WNetGetConnectionW that gets the git branch for the
 // specified local path instead.
 // Somewhat based on:
@@ -136,7 +152,6 @@ DWORD APIENTRY GetGitBranch(
     const wchar_t*,  // This is only the drive, not the directory.
     wchar_t* remote,
     DWORD* length) {
-  char local_path[_MAX_PATH];
   // We never return an error as far as the caller is concerned. This is
   // because the calling code adds a space in the success case (which we don't
   // want) so we always suffix $M with $H to remove it. But in that case, the
@@ -144,20 +159,16 @@ DWORD APIENTRY GetGitBranch(
   // the error for printing in the string and don't indicate failure at the
   // API level.
   remote[0] = 0;
-  if (GetCurrentDirectory(sizeof(local_path), local_path) == 0)
-    return NO_ERROR;
   char git_dir[_MAX_PATH];
-  if (g_git_repository_discover(git_dir, sizeof(git_dir), local_path, 0, "") !=
-      0)
-    return NO_ERROR;
   git_repository* repo;
-  if (g_git_repository_open(&repo, git_dir) != 0)
+  if (!FindGitRepo(git_dir, sizeof(git_dir), &repo))
     return NO_ERROR;
 
   git_reference* head_ref = NULL;
   if (g_git_repository_head(&head_ref, repo) != 0) {
     // TODO: More useful/fancy here?
     wcscpy(remote, L"[(no head)]");
+    g_git_repository_free(repo);
     return NO_ERROR;
   }
 
@@ -218,6 +229,7 @@ DWORD APIENTRY GetGitBranch(
   // No error to check; if it fails we return empty.
 
   g_git_reference_free(head_ref);
+  g_git_repository_free(repo);
   return NO_ERROR;
 }
 
@@ -333,26 +345,63 @@ static bool GitCommandNameCompleter(const CompleterInput& input,
   return false;
 }
 
-// See:
-// https://github.com/git/git/blob/master/contrib/completion/git-completion.bash#L342
-static bool GitRefsHelper(const CompleterInput& input,
-                          vector<wstring>* results) {
-  CHECK(input.word_data.size() > 2 &&
-        input.word_data[0].deescaped_word == L"git");
-  return false;
-}
-
-static bool CompletePrefix(const CompleterInput& input,
-                           const wstring& prefix,
-                           vector<wstring>* results,
-                           const wchar_t* complete[],
-                           size_t complete_size) {
-  for (size_t i = 0; i < complete_size; ++i) {
-    wstring tmp(complete[i]);
+static bool CompletePrefixArray(const CompleterInput& input,
+                                const wstring& prefix,
+                                const wchar_t* candidates[],
+                                size_t candidates_size,
+                                vector<wstring>* results) {
+  for (size_t i = 0; i < candidates_size; ++i) {
+    wstring tmp(candidates[i]);
     if (tmp.substr(0, prefix.size()) == prefix)
       results->push_back(tmp + L" ");
   }
   return !results->empty();
+}
+
+static bool CompletePrefixVector(const CompleterInput& input,
+                                 const wstring& prefix,
+                                 const vector<wstring>& candidates,
+                                 vector<wstring>* results) {
+  for (size_t i = 0; i < candidates.size(); ++i) {
+    if (candidates[i].substr(0, prefix.size()) == prefix)
+      results->push_back(candidates[i] + L" ");
+  }
+  return !results->empty();
+}
+
+// See:
+// https://github.com/git/git/blob/master/contrib/completion/git-completion.bash#L342
+static int ForeachRefCallback(const char* name, void* payload) {
+  vector<wstring>* results = reinterpret_cast<vector<wstring>*>(payload);
+  wchar_t wide[_MAX_PATH];
+  CHECK(strncmp(name, "refs/", 5) == 0);
+  const char* second_slash = strchr(&name[5], '/');
+  CHECK(second_slash);
+  MultiByteToWideChar(
+      CP_ACP, MB_PRECOMPOSED, second_slash + 1, -1, wide, sizeof(wide));
+  results->push_back(wide);
+  return 0;
+}
+
+static bool GitRefsHelper(const CompleterInput& input,
+                          const wstring& prefix,
+                          vector<wstring>* results) {
+  CHECK(input.word_data.size() > 2 &&
+        input.word_data[0].deescaped_word == L"git");
+  char git_dir[_MAX_PATH];
+  git_repository* repo;
+  if (!FindGitRepo(git_dir, sizeof(git_dir), &repo))
+    return false;
+  vector<wstring> candidates;
+  bool ok = g_git_reference_foreach_glob(
+             repo, "refs/tags/*", ForeachRefCallback, &candidates) == 0 &&
+         g_git_reference_foreach_glob(
+             repo, "refs/heads/*", ForeachRefCallback, &candidates) == 0 &&
+         g_git_reference_foreach_glob(
+             repo, "refs/remotes/*", ForeachRefCallback, &candidates) == 0;
+  g_git_repository_free(repo);
+  CompletePrefixVector(input, prefix, candidates, results);
+  return ok && !results->empty();
 }
 
 static bool GitCommandArgCompleter(const CompleterInput& input,
@@ -365,13 +414,13 @@ static bool GitCommandArgCompleter(const CompleterInput& input,
         L"--conflict=", L"--orphan", L"--patch",
       };
       if (input.word_data[2].deescaped_word[0] == L'-' &&
-          CompletePrefix(input,
-                         input.word_data[2].deescaped_word,
-                         results,
-                         kCheckoutLongArgs,
-                         ARRAYSIZE(kCheckoutLongArgs)))
+          CompletePrefixArray(input,
+                              input.word_data[2].deescaped_word,
+                              kCheckoutLongArgs,
+                              ARRAYSIZE(kCheckoutLongArgs),
+                              results))
         return true;
-      if (GitRefsHelper(input, results))
+      if (GitRefsHelper(input, input.word_data[2].deescaped_word, results))
         return true;
     }
   }
