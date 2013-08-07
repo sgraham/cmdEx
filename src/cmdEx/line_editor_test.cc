@@ -552,9 +552,8 @@ TEST_F(LineEditorTest, TabCompleteInMiddle) {
 }
 
 // F8, PgUp, PgDown, Up, Down for command history
+// Save command history to $CMDEX_HISTFILE
 // Ctrl-C to break line
-// Tab complete {file, dir, branch}
-// Some intelligence for when to complete which things (md, cd, git <stuff>)
 // Sort complete results somehow
 // Ctrl-V to paste
 // Ctrl-Y (?) to copy line

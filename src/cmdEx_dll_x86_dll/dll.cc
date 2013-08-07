@@ -597,6 +597,16 @@ static DirectoryHistory* g_directory_history;
 static LineEditor* g_editor;
 static RealConsole g_real_console;
 
+static void (*g_original_exit)(int);
+
+// Write command history on shell exit. TODO: This needs to only be when the
+// shell was interactive.
+void ExitReplacement(int exit_code) {
+  printf("ExitReplacement stub, exit_code: %d\n", exit_code);
+
+  g_original_exit(exit_code);
+}
+
 BOOL WINAPI ReadConsoleReplacement(HANDLE input,
                                    wchar_t* buffer,
                                    DWORD buffer_size,
@@ -844,6 +854,14 @@ void** GetImportByName(void* base, const char* dll, const char* func_name) {
   return NULL;
 }
 
+void ReadMemory(void* addr, void* dest, size_t bytes) {
+  DWORD bytes_written;
+  BOOL ret =
+      ReadProcessMemory(GetCurrentProcess(), addr, dest, bytes, &bytes_written);
+  if (!ret)
+    Error("couldn't WriteProcessMemory");
+}
+
 void WriteMemory(void* addr, const void* src, size_t bytes) {
   DWORD previous_protect;
   if (VirtualProtect(addr, bytes, PAGE_EXECUTE_READWRITE, &previous_protect)) {
@@ -1001,14 +1019,24 @@ LONG WINAPI HookTrap(EXCEPTION_POINTERS* info) {
   void* func_addr = GetGitBranch;
   WriteMemory(imp, &func_addr, sizeof(imp));
 
-  // Patch ReadConsoleW in the same way. This is currently unused, but we'll
-  // need it to improve directory completion.
+  // Patch ReadConsoleW in the same way.
   imp = GetImportByName(GetModuleHandle(NULL), NULL, "ReadConsoleW");
   if (!imp)
     imp = GetImportByName(GetModuleHandle(NULL), NULL, "ReadConsoleWStub");
   if (!imp)
     Error("couldn't get import for ReadConsoleW");
   func_addr = ReadConsoleReplacement;
+  WriteMemory(imp, &func_addr, sizeof(imp));
+
+  // Patch msvcrt!exit in the same way. Save original so we can call it to
+  // actually exit.
+  imp = GetImportByName(GetModuleHandle(NULL), NULL, "exit");
+  if (!imp)
+    imp = GetImportByName(GetModuleHandle(NULL), NULL, "exit");
+  if (!imp)
+    Error("couldn't get import for exit");
+  func_addr = ExitReplacement;
+  ReadMemory(imp, &g_original_exit, sizeof(imp));
   WriteMemory(imp, &func_addr, sizeof(imp));
 
   // Patch "Terminate?" prompt code.
