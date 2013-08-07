@@ -342,13 +342,17 @@ static bool GitRefsHelper(const CompleterInput& input,
   return false;
 }
 
-// ... must all be L"", NULL terminated. Returns true iff results is filled
-// out.
-static bool CompleteFlagsIfInLongArg(const CompleterInput& input,
-                                     vector<wstring>* results,
-                                     ...) {
-  // TODO: Possibly push the prefix gunk up into line editor.
-  return false;
+static bool CompletePrefix(const CompleterInput& input,
+                           const wstring& prefix,
+                           vector<wstring>* results,
+                           const wchar_t* complete[],
+                           size_t complete_size) {
+  for (size_t i = 0; i < complete_size; ++i) {
+    wstring tmp(complete[i]);
+    if (tmp.substr(0, prefix.size()) == prefix)
+      results->push_back(tmp + L" ");
+  }
+  return !results->empty();
 }
 
 static bool GitCommandArgCompleter(const CompleterInput& input,
@@ -356,17 +360,16 @@ static bool GitCommandArgCompleter(const CompleterInput& input,
   if (input.word_data.size() > 2 &&
       input.word_data[0].deescaped_word == L"git") {
     if (input.word_data[1].deescaped_word == L"checkout") {
-      if (CompleteFlagsIfInLongArg(input,
-                                   results,
-                                   L"--quiet",
-                                   L"--ours",
-                                   L"--theirs",
-                                   L"--no-track",
-                                   L"--merge",
-                                   L"--conflict=",
-                                   L"--orphan",
-                                   L"--patch",
-                                   NULL))
+      const wchar_t* kCheckoutLongArgs[] = {
+        L"--quiet", L"--ours", L"--theirs", L"--no-track", L"--merge",
+        L"--conflict=", L"--orphan", L"--patch",
+      };
+      if (input.word_data[2].deescaped_word[0] == L'-' &&
+          CompletePrefix(input,
+                         input.word_data[2].deescaped_word,
+                         results,
+                         kCheckoutLongArgs,
+                         ARRAYSIZE(kCheckoutLongArgs)))
         return true;
       if (GitRefsHelper(input, results))
         return true;
