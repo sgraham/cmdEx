@@ -7,15 +7,29 @@ cmdEx makes some small improvements to cmd.exe. Currently:
 - In PROMPT, $M displays git branch information instead of its normal function.
 - Suppress "Terminate batch job (Y/N)?" prompt (prompt isn't displayed, and
   the assumed answer is always 'y').
+- Experimental improvements to input handling (set CMDEX_READCONSOLE=1).
+  Keybindings:
+    - Alt-Up does "cd ..", maintaining current command.
+    - Ctrl-W deletes back a word, Ctrl-Backspace deletes back a path
+      component.
+    - Alt-Left/Right navigates like a web browser in previously visited
+      directories, maintaining current command.
+    - Improved tab completion, in addition to file and directory
+      (contextually), built-ins and commands in path are completed, git
+      subcommands are completed, and some git subcommands have arguments and
+      context-sensitive completion (e.g. "git checkout o<TAB>" might complete
+      to "git checkout origin/master").
+    - Ctrl-Enter opens an Explorer window in the current directory.
+    - Ctrl-L clears the console and puts the current command at the top of the
+      window.
+    - Ctrl-D at an empty prompt exits the shell.
+    - Escape clears the current line
+    - Ctrl-A/Ctrl-E are the same as Home/End.
 
-Possible future features? (Not implemented)
-- Increase command history length
-- Save command history across shells
-- Improve tab completion (maybe override dir completion?)
-  - git commands
-  - git branch completion
-- Alt-Up == "cd .."
-- Alt-Left/Right navigate through directory history
+Possible future features? (Not implemented yet)
+- Last 1000 commands are saved to %USERPROFILE%\_cmdex_history on 'exit',
+  and loaded on startup.
+- Ctrl-Left/Right
 
 
 cmdEx is currently only known to work on Windows 7 and Windows 8, and only when
@@ -30,8 +44,9 @@ C:\...\cmdEx>out\cmdEx
 
 Build:
 
-Requires: git, svn, cmake, devenv.
+Requires: git, svn, cmake, devenv in path.
 
+With VS2012+ vars:
 C:\...\cmdEx>python sng.py -u           # -u pulls third_party dependencies
 C:\...\cmdEx>third_party\ninja\ninja
 
@@ -43,6 +58,5 @@ C:\...\cmdEx>python test.py
 
 
 
-Similar project, but more wholesale behaviour replacement:
-http://code.google.com/p/clink/. Some of cmdEx's injection code is based on
-Clink's.
+Similar project, but readline based: http://code.google.com/p/clink/. Some of
+cmdEx's injection code is based on Clink's.

@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "cmdEx/command_history.h"
 #include "cmdEx/directory_history.h"
 #include "cmdEx/line_editor.h"
 #include "cmdEx/string_util.h"
@@ -593,6 +594,7 @@ static bool FilenameCompleter(const CompleterInput& input,
 }
 
 static DirectoryHistory* g_directory_history;
+static CommandHistory* g_command_history;
 
 static LineEditor* g_editor;
 static RealConsole g_real_console;
@@ -602,8 +604,7 @@ static void (*g_original_exit)(int);
 // Write command history on shell exit. TODO: This needs to only be when the
 // shell was interactive.
 void ExitReplacement(int exit_code) {
-  printf("ExitReplacement stub, exit_code: %d\n", exit_code);
-
+  //printf("ExitReplacement stub, exit_code: %d\n", exit_code);
   g_original_exit(exit_code);
 }
 
