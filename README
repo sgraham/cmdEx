@@ -44,7 +44,7 @@ C:\...\cmdEx>out\cmdEx
 
 Build:
 
-Requires: git, svn, cmake, devenv in path.
+Requires: git, svn, cmake, devenv, python in path.
 
 With VS2012+ vars:
 C:\...\cmdEx>python sng.py -u           # -u pulls third_party dependencies
