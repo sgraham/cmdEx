@@ -581,4 +581,3 @@ TEST_F(LineEditorTest, TabCompleteInMiddle) {
 // Sort complete results somehow
 // Ctrl-V to paste
 // Ctrl-Y (?) to copy line
-// Multiline probably crashes
