@@ -18,7 +18,7 @@ class CommandHistory {
 
   void AddCommand(const wstring& command);
 
-  bool NavigateInHistory(int direction, const wstring& prefix);
+  bool MoveInHistory(int direction, const wstring& prefix, wstring* result);
 
  private:
   // Most recent are at the end.

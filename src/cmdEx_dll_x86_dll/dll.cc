@@ -475,6 +475,8 @@ static void SearchPathByPrefix(const wstring& prefix,
   }
 }
 
+// TODO: word 0 should do in path and cwd dirs before slash, but with slash,
+// should be directory or file match in PATHEXT for "out\de<TAB>\chr<TAB>"
 static bool CommandInPathCompleter(const CompleterInput& input,
                                    vector<wstring>* results) {
   bool in_word_zero = input.word_index == 0;
@@ -687,6 +689,8 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
       RealWorkingDirectory* working_directory = new RealWorkingDirectory;
       g_directory_history = new DirectoryHistory(working_directory);
     }
+    if (!g_command_history)
+      g_command_history = new CommandHistory;
     if (!g_editor) {
       g_editor = new LineEditor;
       g_editor->RegisterCompleter(GitCommandNameCompleter);
@@ -696,7 +700,7 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
       g_editor->RegisterCompleter(FilenameCompleter);
     }
     g_real_console.SetConsole(conout);
-    g_editor->Init(&g_real_console, g_directory_history);
+    g_editor->Init(&g_real_console, g_directory_history, g_command_history);
     for (;;) {
       INPUT_RECORD input_record;
       DWORD num_read;

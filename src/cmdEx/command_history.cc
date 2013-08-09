@@ -12,12 +12,15 @@ void CommandHistory::Populate(const vector<wstring>& commands) {
 }
 
 vector<wstring> CommandHistory::GetListForSaving() {
-  return vector<wstring>();
+  return commands_;
 }
 
 void CommandHistory::AddCommand(const wstring& command) {
 }
 
-bool CommandHistory::NavigateInHistory(int direction, const wstring& prefix) {
+bool CommandHistory::MoveInHistory(int direction, const wstring& prefix, wstring* result) {
+  position_ += direction;
+  if (!prefix.empty()) {
+  }
   return false;
 }

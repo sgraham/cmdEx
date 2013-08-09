@@ -6,15 +6,19 @@
 
 #include <windows.h>
 
+#include "cmdEx/command_history.h"
 #include "cmdEx/directory_history.h"
 #include "common/util.h"
 
-void LineEditor::Init(ConsoleInterface* console, DirectoryHistory* history) {
+void LineEditor::Init(ConsoleInterface* console,
+                      DirectoryHistory* directory_history,
+                      CommandHistory* command_history) {
   console_ = console;
   console->GetCursorLocation(&start_x_, &start_y_);
   largest_y_ = start_y_;
-  history_ = history;
-  history_->StartingEdit();
+  directory_history_ = directory_history;
+  directory_history_->StartingEdit();
+  command_history_ = command_history;
   RedrawConsole();
 }
 
@@ -30,7 +34,8 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
     // back on if it did continue. TODO: We hang on to results until next
     // completion which is kind of dumb.
     int previous_completion_begin = completion_word_begin_;
-    // TODO: This test sucks, need a better way to determine mode.
+    // TODO: This test sucks, need a better way to determine mode. Or at least
+    // many more dead keys here.
     if (vk != VK_SHIFT && vk != VK_CONTROL && vk != VK_MENU)
       completion_word_begin_ = -1;
 
@@ -39,7 +44,8 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       return kReturnToCmdThenResume;
     } else if (alt_down && !ctrl_down && (vk == VK_LEFT || vk == VK_RIGHT)) {
       // Navigate back or forward.
-      bool changed = history_->NavigateInHistory(vk == VK_LEFT ? -1 : 1);
+      bool changed =
+          directory_history_->NavigateInHistory(vk == VK_LEFT ? -1 : 1);
       if (changed) {
         fake_command_ = L"\x0d\x0a";
         printf("\n");
@@ -61,7 +67,6 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       line_ += L"\x0d\x0a";
       int x, y;
       console_->GetCursorLocation(&x, &y);
-      // TODO: Scrolling seems to work, but I'm not sure why.
       console_->SetCursorLocation(0, y + 1);
       return kReturnToCmd;
     } else if (!alt_down && !ctrl_down && vk == VK_ESCAPE) {
@@ -106,6 +111,14 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
     } else if ((!alt_down && !ctrl_down && vk == VK_END) ||
                (!alt_down && ctrl_down && vk == 'E')) {
       position_ = line_.size();
+    } else if (!alt_down && !ctrl_down && vk == VK_UP) {
+      command_history_->MoveInHistory(-1, L"", &line_);
+    } else if (!alt_down && !ctrl_down && vk == VK_DOWN) {
+      command_history_->MoveInHistory(1, L"", &line_);
+    } else if (!alt_down && !ctrl_down && vk == VK_PRIOR) {
+      command_history_->MoveInHistory(-1, line_.substr(0, position_), &line_);
+    } else if (!alt_down && !ctrl_down && vk == VK_NEXT) {
+      command_history_->MoveInHistory(1, line_.substr(0, position_), &line_);
     } else if (isprint(ascii_char)) {
       line_.insert(position_, 1, ascii_char);
       position_++;

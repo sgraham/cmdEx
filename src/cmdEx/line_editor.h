@@ -10,6 +10,7 @@
 
 #include "cmdEx/completion.h"
 
+class CommandHistory;
 class DirectoryHistory;
 
 class ConsoleInterface {
@@ -29,11 +30,15 @@ class LineEditor {
         start_x_(0),
         start_y_(0),
         position_(0),
-        history_(NULL),
+        directory_history_(NULL),
+        command_history_(NULL),
         completion_index_(-1) {}
 
-  // Called initially and on each editing resumption. |history| is not owned.
-  void Init(ConsoleInterface* console, DirectoryHistory* history);
+  // Called initially and on each editing resumption. |directory_history| and
+  // |command_history| are not owned.
+  void Init(ConsoleInterface* console,
+            DirectoryHistory* directory_history,
+            CommandHistory* command_history);
 
   enum HandleAction {
     kIncomplete,
@@ -73,7 +78,8 @@ class LineEditor {
   wstring line_;
   int position_;
   wstring fake_command_;
-  DirectoryHistory* history_;  // Weak.
+  DirectoryHistory* directory_history_;  // Weak.
+  CommandHistory* command_history_;  // Weak.
 
   vector<Completer> completers_;
 

@@ -6,6 +6,7 @@
 
 #include <windows.h>
 
+#include "cmdEx/command_history.h"
 #include "cmdEx/directory_history.h"
 #include "gtest/gtest.h"
 
@@ -75,7 +76,7 @@ class MockConsoleInterface : public ConsoleInterface {
 class LineEditorTest : public ::testing::Test {
  public:
   LineEditorTest() : dir_history(&wd) {
-    le.Init(&console, &dir_history);
+    le.Init(&console, &dir_history, &cmd_history);
     wd.Set("c:\\some\\stuff");
   }
 
@@ -90,6 +91,7 @@ class LineEditorTest : public ::testing::Test {
   MockConsoleInterface console;
   MockWorkingDirectory wd;
   DirectoryHistory dir_history;
+  CommandHistory cmd_history;
   LineEditor le;
 };
 
