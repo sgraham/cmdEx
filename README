@@ -25,11 +25,12 @@ cmdEx makes some small improvements to cmd.exe. Currently:
     - Ctrl-D at an empty prompt exits the shell.
     - Escape clears the current line
     - Ctrl-A/Ctrl-E are the same as Home/End.
+    - Ctrl-Left/Right jump by word
 
-Possible future features? (Not implemented yet)
+Future features? (Not implemented yet)
 - Last 1000 commands are saved to %USERPROFILE%\_cmdex_history on 'exit',
   and loaded on startup.
-- Ctrl-Left/Right
+- Up, Down, PgUp/F8, PgDown to navigate history.
 
 
 cmdEx is currently only known to work on Windows 7 and Windows 8, and only when
