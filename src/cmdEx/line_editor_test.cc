@@ -44,14 +44,14 @@ class MockConsoleInterface : public ConsoleInterface {
       override {
     ASSERT_GE(x, 0);
     ASSERT_GE(y, 0);
-    ASSERT_LT(x + count, width);
+    ASSERT_LE(x + count, width);
     ASSERT_LT(y, height);
     memcpy(&screen_data[y * width + x], str, count * sizeof(wchar_t));
   }
   virtual void FillChar(wchar_t ch, int count, int x, int y) override {
     ASSERT_GE(x, 0);
     ASSERT_GE(y, 0);
-    ASSERT_LT(x + count, width);
+    ASSERT_LE(x + count, width);
     ASSERT_LT(y, height);
     for (int i = 0; i < count; ++i)
       screen_data[y * width + x + i] = ch;
@@ -355,6 +355,30 @@ TEST_F(LineEditorTest, EnteringCommandHasNewline) {
   unsigned long num_chars;
   le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
   EXPECT_EQ(buf, wstring(L"wee\x0d\x0a"));
+}
+
+TEST_F(LineEditorTest, MultilineWrap) {
+  // Assuming console is 50 per mock setup.
+  TypeLetters("01234567890123456789012345678901234567890123456789");
+  EXPECT_EQ(0, console.cursor_x);
+  EXPECT_EQ(1, console.cursor_y);
+}
+
+TEST_F(LineEditorTest, MultilineClearOnKillBack) {
+  // Assuming console is 50 per mock setup.
+  TypeLetters("01234567890123456789012345678901234567890123456789");
+  TypeLetters("01234567890123456789012345678901234567890123456789");
+  TypeLetters("0123456789012345678901234567890123456789012345678");
+  EXPECT_EQ(49, console.cursor_x);
+  EXPECT_EQ(2, console.cursor_y);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, VK_BACK));
+  EXPECT_EQ(0, console.cursor_x);
+  EXPECT_EQ(0, console.cursor_y);
+  for (int x = 0; x < 50; ++x)
+    for (int y = 0; y < 3; ++y)
+      EXPECT_EQ(' ', console.GetCharAt(x, y));
 }
 
 bool MockCompleterBasic(const CompleterInput& input, vector<wstring>* results) {

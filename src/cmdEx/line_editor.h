@@ -68,6 +68,7 @@ class LineEditor {
   ConsoleInterface* console_;
   int start_x_;
   int start_y_;
+  int largest_y_;  // The farthest down line wrapping has gotten us.
   wstring line_;
   int position_;
   wstring fake_command_;

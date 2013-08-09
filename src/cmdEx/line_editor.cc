@@ -12,6 +12,7 @@
 void LineEditor::Init(ConsoleInterface* console, DirectoryHistory* history) {
   console_ = console;
   console->GetCursorLocation(&start_x_, &start_y_);
+  largest_y_ = start_y_;
   history_ = history;
   history_->StartingEdit();
   RedrawConsole();
@@ -127,28 +128,86 @@ bool LineEditor::IsCompleting() const {
   return !completion_results_.empty() && completion_word_begin_ != -1;
 }
 
+// This code is redonk. Instead:
+// - break line_ into N chunks given width, and initial X
+// - draw them at initial X and subsequent Y at X=0
+// - position the cursor based
+// - clear to the end of line of the last Y we previously wrote to
+// - save the new Y range
+
+struct LineChunk {
+  LineChunk(int offset, int start_x, int start_y)
+      : start_offset(offset), start_x(start_x), start_y(start_y) {}
+
+  int start_offset;
+  wstring contents;
+  int start_x;
+  int start_y;
+};
+
+vector<LineChunk> BreakIntoLineChunks(const wstring& line,
+                                      int startx,
+                                      int starty,
+                                      int width) {
+  int x = startx;
+  int y = starty;
+  int offset = 0;
+  vector<LineChunk> chunks;
+  LineChunk chunk(offset, x, y);
+  // TODO: This could be better.
+  for (const auto c : line) {
+    chunk.contents.push_back(c);
+    ++offset;
+    ++x;
+    if (x == width) {
+      x = 0;
+      ++y;
+      chunks.push_back(chunk);
+      chunk = LineChunk(offset, x, y);
+    }
+  }
+  if (!chunk.contents.empty())
+    chunks.push_back(chunk);
+  return chunks;
+}
+
+
 void LineEditor::RedrawConsole() {
   int width = console_->GetWidth();
   CHECK(width > 0);
-  int x = start_x_;
-  int y = start_y_;
-  int offset = 0;
-  for (;;) {
-    int num_chars_to_draw =
-        min(width - x, static_cast<int>(line_.size()) - offset);
-    console_->DrawString(&line_[offset], num_chars_to_draw, x, y);
-    if (position_ >= offset && position_ < offset + num_chars_to_draw)
-      console_->SetCursorLocation(position_ - offset + x, y);
-    if (offset + num_chars_to_draw >= static_cast<int>(line_.size())) {
-      int fillx = x + offset + num_chars_to_draw;
-      console_->FillChar(L' ', width - fillx - 1, fillx, y);
-      break;
+  bool cursor_past_end = position_ == static_cast<int>(line_.size());
+  vector<LineChunk> chunks = BreakIntoLineChunks(
+      line_ + (cursor_past_end ? wstring(L"\x01") : wstring(L"")),
+      start_x_,
+      start_y_,
+      width);
+  int last_drawn_x = start_x_;
+  int last_drawn_y = start_y_;
+  for (size_t i = 0; i < chunks.size(); ++i) {
+    const LineChunk& chunk = chunks[i];
+    size_t to_draw = chunk.contents.size();
+    if (i == chunks.size() - 1 && cursor_past_end)
+      --to_draw;
+    console_->DrawString(chunk.contents.c_str(),
+                         to_draw,
+                         chunk.start_x,
+                         chunk.start_y);
+    last_drawn_x = chunk.start_x + to_draw;
+    last_drawn_y = chunk.start_y;
+    if (position_ >= chunk.start_offset &&
+        position_ <
+            chunk.start_offset + static_cast<int>(chunk.contents.size())) {
+      console_->SetCursorLocation(
+          chunk.start_x + (position_ - chunk.start_offset), chunk.start_y);
     }
-    offset += num_chars_to_draw;
-    ++y;
-    x = 0;
   }
-  console_->SetCursorLocation(position_ - offset + x, y);
+
+  int clear_from = last_drawn_x;
+  for (int y = last_drawn_y; y <= largest_y_; ++y) {
+    console_->FillChar(L' ', width - clear_from, clear_from, y);
+    clear_from = 0;
+  }
+  largest_y_ = chunks.empty() ? start_y_ : chunks.back().start_y;
 }
 
 int LineEditor::FindBackwards(int start_at, const char* until) {
