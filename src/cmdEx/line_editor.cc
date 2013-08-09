@@ -92,6 +92,14 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       position_ = max(0, position_ - 1);
     } else if (!alt_down && !ctrl_down && vk == VK_RIGHT) {
       position_ = min(static_cast<int>(line_.size()), position_ + 1);
+    } else if (!alt_down && ctrl_down && vk == VK_LEFT) {
+      position_ = FindBackwards(max(0, position_ - 1), " ");
+    } else if (!alt_down && ctrl_down && vk == VK_RIGHT) {
+      position_ = min(static_cast<int>(line_.size() - 1),
+                      FindForwards(position_, " ") + 1);
+      while (position_ < static_cast<int>(line_.size()) - 1 &&
+             line_[position_] == L' ')
+        position_++;
     } else if ((!alt_down && !ctrl_down && vk == VK_HOME) ||
                (!alt_down && ctrl_down && vk == 'A')) {
       position_ = 0;
@@ -217,6 +225,18 @@ int LineEditor::FindBackwards(int start_at, const char* until) {
   while (result >= 0 && strchr(until, line_[result]) == NULL)
     result--;
   result++;
+  return result;
+}
+
+int LineEditor::FindForwards(int start_at, const char* until) {
+  int result = start_at;
+  while (result < static_cast<int>(line_.size()) &&
+         strchr(until, line_[result]) != NULL)
+    result++;
+  while (result < static_cast<int>(line_.size()) &&
+         strchr(until, line_[result]) == NULL)
+    result++;
+  result--;
   return result;
 }
 

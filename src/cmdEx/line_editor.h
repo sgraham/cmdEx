@@ -63,6 +63,7 @@ class LineEditor {
  private:
   void RedrawConsole();
   int FindBackwards(int start_at, const char* until);
+  int FindForwards(int start_at, const char* until);
   void TabComplete(bool forward_cycle);
 
   ConsoleInterface* console_;

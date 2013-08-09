@@ -341,6 +341,47 @@ TEST_F(LineEditorTest, CtrlD) {
   EXPECT_EQ(buf, wstring(L"exit\x0d\x0a"));
 }
 
+TEST_F(LineEditorTest, CtrlArrows) {
+  TypeLetters("this is some stuff");
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(13, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(8, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(5, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(0, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(0, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, VK_RIGHT));
+  EXPECT_EQ(5, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, VK_RIGHT));
+  EXPECT_EQ(8, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, VK_RIGHT));
+  EXPECT_EQ(13, console.cursor_x);
+
+  // Not sure I love this, but it matches cmd.
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, VK_RIGHT));
+  EXPECT_EQ(17, console.cursor_x);
+}
+
 TEST_F(LineEditorTest, EnteringCommandHasNewline) {
   TypeLetters("wee");
   EXPECT_EQ(LineEditor::kReturnToCmd,
