@@ -2,7 +2,7 @@ cmdEx: Fixes for cmd.exe
 Scott Graham <scott.cmdex@h4ck3r.net>
 -------------------------------------
 
-cmdEx makes some small improvements to cmd.exe. Currently:
+cmdEx makes some improvements to cmd.exe. Currently:
 
 - In PROMPT, $M displays git branch information instead of its normal function.
 - Suppress "Terminate batch job (Y/N)?" prompt (prompt isn't displayed, and
