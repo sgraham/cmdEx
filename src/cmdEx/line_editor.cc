@@ -121,9 +121,11 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
                (!alt_down && ctrl_down && vk == 'E')) {
       position_ = line_.size();
     } else if (!alt_down && !ctrl_down && vk == VK_UP) {
-      command_history_->MoveInHistory(-1, L"", &line_);
+      if (command_history_->MoveInHistory(-1, L"", &line_))
+        position_ = line_.size();
     } else if (!alt_down && !ctrl_down && vk == VK_DOWN) {
-      command_history_->MoveInHistory(1, L"", &line_);
+      if (command_history_->MoveInHistory(1, L"", &line_))
+        position_ = line_.size();
     } else if (!alt_down && !ctrl_down && (vk == VK_PRIOR || vk == VK_F8)) {
       command_history_->MoveInHistory(-1, line_.substr(0, position_), &line_);
     } else if (!alt_down && !ctrl_down && vk == VK_NEXT) {

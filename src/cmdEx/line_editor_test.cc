@@ -683,7 +683,7 @@ TEST_F(LineEditorTest, CommandHistoryUpDown) {
       LineEditor::kReturnToCmd,
       le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
   ReInit();
-  TypeLetters("def");
+  TypeLetters("defz");
   EXPECT_EQ(
       LineEditor::kReturnToCmd,
       le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
@@ -703,6 +703,7 @@ TEST_F(LineEditorTest, CommandHistoryUpDown) {
   EXPECT_EQ('g', console.GetCharAt(0, 3));
   EXPECT_EQ('h', console.GetCharAt(1, 3));
   EXPECT_EQ('i', console.GetCharAt(2, 3));
+  EXPECT_EQ(3, console.cursor_x);
 
   EXPECT_EQ(
       LineEditor::kIncomplete,
@@ -710,6 +711,8 @@ TEST_F(LineEditorTest, CommandHistoryUpDown) {
   EXPECT_EQ('d', console.GetCharAt(0, 3));
   EXPECT_EQ('e', console.GetCharAt(1, 3));
   EXPECT_EQ('f', console.GetCharAt(2, 3));
+  EXPECT_EQ('z', console.GetCharAt(3, 3));
+  EXPECT_EQ(4, console.cursor_x);
 
   EXPECT_EQ(
       LineEditor::kIncomplete,
@@ -717,6 +720,7 @@ TEST_F(LineEditorTest, CommandHistoryUpDown) {
   EXPECT_EQ('a', console.GetCharAt(0, 3));
   EXPECT_EQ('b', console.GetCharAt(1, 3));
   EXPECT_EQ('c', console.GetCharAt(2, 3));
+  EXPECT_EQ(3, console.cursor_x);
 
   // Wrap.
   EXPECT_EQ(
