@@ -12,8 +12,8 @@ cmdEx makes some improvements to cmd.exe. Currently:
     - Alt-Up does "cd ..", maintaining current command.
     - Ctrl-W deletes back a word, Ctrl-Backspace deletes back a path
       component.
-    - Alt-Left/Right navigates like a web browser in previously visited
-      directories, maintaining current command.
+    - Alt-Left/Right or browser back/forward navigates like a web browser in
+      previously visited directories, maintaining current command.
     - Improved tab completion, in addition to file and directory
       (contextually), built-ins and commands in path are completed, git
       subcommands are completed, and some git subcommands have arguments and

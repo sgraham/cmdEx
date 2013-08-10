@@ -36,16 +36,18 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
     int previous_completion_begin = completion_word_begin_;
     // TODO: This test sucks, need a better way to determine mode. Or at least
     // many more dead keys here.
-    if (vk != VK_SHIFT && vk != VK_CONTROL && vk != VK_MENU)
+    if (vk != VK_SHIFT && vk != VK_CONTROL && vk != VK_MENU && vk != VK_CAPITAL)
       completion_word_begin_ = -1;
 
     if (alt_down && !ctrl_down && vk == VK_UP) {
       fake_command_ = L"cd..\x0d\x0a";
       return kReturnToCmdThenResume;
-    } else if (alt_down && !ctrl_down && (vk == VK_LEFT || vk == VK_RIGHT)) {
+    } else if (alt_down && !ctrl_down &&
+               (vk == VK_LEFT || vk == VK_RIGHT ||
+                vk == VK_BROWSER_BACK || vk == VK_BROWSER_FORWARD)) {
       // Navigate back or forward.
-      bool changed =
-          directory_history_->NavigateInHistory(vk == VK_LEFT ? -1 : 1);
+      bool changed = directory_history_->NavigateInHistory(
+          (vk == VK_LEFT || vk == VK_BROWSER_BACK) ? -1 : 1);
       if (changed) {
         fake_command_ = L"\x0d\x0a";
         printf("\n");
