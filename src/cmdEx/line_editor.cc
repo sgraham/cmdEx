@@ -19,8 +19,6 @@ void LineEditor::Init(ConsoleInterface* console,
   directory_history_ = directory_history;
   directory_history_->StartingEdit();
   command_history_ = command_history;
-  line_.clear();
-  position_ = 0;
   RedrawConsole();
 }
 
@@ -149,6 +147,8 @@ void LineEditor::ToCmdBuffer(wchar_t* buffer,
   } else {
     wcscpy_s(buffer, buffer_size, line_.c_str());
     *num_chars = line_.size();
+    line_.clear();
+    position_ = 0;
   }
 }
 

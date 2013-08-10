@@ -881,9 +881,7 @@ TEST_F(LineEditorTest, CommandHistorySaving) {
   EXPECT_EQ(' ', console.GetCharAt(4, 4));
 }
 
-// Save command history to $CMDEX_HISTFILE
 // Ctrl-C to break line
 // Sort complete results somehow?
 // Ctrl-V to paste
 // Ctrl-Y (?) to copy line
-// Ctrl-K/U/Home/End for line kill
