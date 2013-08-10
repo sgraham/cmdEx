@@ -663,7 +663,9 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
                                    DWORD buffer_size,
                                    LPDWORD chars_read,
                                    PCONSOLE_READCONSOLE_CONTROL control) {
-  if (getenv("CMDEX_NOREADCONSOLE")) {
+  // If explicitly disabled, or in "Are you sure (Y/N)?" mode, just fallback
+  // to standard behaviour.
+  if (getenv("CMDEX_NOREADCONSOLE") || buffer_size == 1) {
     Log("non-overridden ReadConsole");
     BOOL ret = ReadConsoleW(input, buffer, buffer_size, chars_read, control);
     Log("returning %d", ret);
