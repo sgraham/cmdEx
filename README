@@ -31,6 +31,7 @@ Future features? (Not implemented yet)
 - Last 1000 commands are saved to %USERPROFILE%\_cmdex_history on 'exit',
   and loaded on startup.
 - Up, Down, PgUp/F8, PgDown to navigate history.
+- Ctrl-U/Ctrl-K and Ctrl-Home/End to delete to start/end of line.
 
 
 cmdEx is currently only known to work on Windows 7 and Windows 8, and only when

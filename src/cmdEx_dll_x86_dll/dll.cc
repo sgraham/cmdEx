@@ -86,6 +86,53 @@ void ReadInto(const string& path, char* buffer) {
   }
 }
 
+string GetHistoryFilename() {
+  const char* profile_dir = getenv("USERPROFILE");
+  string name;
+  if (profile_dir)
+    name = profile_dir + string("\\");
+  name += "_cmdex_history";
+  return name;
+}
+
+vector<wstring> ReadHistoryFile() {
+  vector<wstring> result;
+  FILE* f = fopen(GetHistoryFilename().c_str(), "rb, ccs=UTF-16LE");
+  if (!f) {
+    Log("couldn't read history file");
+    return vector<wstring>();
+  }
+  for (;;) {
+    wchar_t tmp[4096];
+    if (fgetws(tmp, sizeof(tmp), f) == NULL)
+      break;
+    if (tmp[0] == 0)
+      break;
+    CHECK(tmp[wcslen(tmp) - 1] == L'\n');
+    tmp[wcslen(tmp) - 1] = 0;
+    result.push_back(tmp);
+    tmp[0] = 0;
+    if (feof(f))
+      break;
+  }
+  fclose(f);
+  return result;
+}
+
+void WriteHistoryFile(const vector<wstring>& history) {
+  FILE* f = fopen(GetHistoryFilename().c_str(), "wb, ccs=UTF-16LE");
+  if (!f) {
+    Log("couldn't write history file");
+    return;
+  }
+  for (size_t i = max(static_cast<int>(history.size()) - 1000, 0);
+       i < history.size();
+       ++i) {
+    fwprintf(f, L"%s\n", history[i].c_str());
+  }
+  fclose(f);
+}
+
 HMODULE LoadLibraryInSameLocation(HMODULE self, const char* dll_name) {
   char module_location[_MAX_PATH];
   GetModuleFileName(self, module_location, sizeof(module_location));
@@ -607,6 +654,7 @@ static void (*g_original_exit)(int);
 // shell was interactive.
 void ExitReplacement(int exit_code) {
   //printf("ExitReplacement stub, exit_code: %d\n", exit_code);
+  WriteHistoryFile(g_command_history->GetListForSaving());
   g_original_exit(exit_code);
 }
 
@@ -615,59 +663,6 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
                                    DWORD buffer_size,
                                    LPDWORD chars_read,
                                    PCONSOLE_READCONSOLE_CONTROL control) {
-
-  // It'd be nice to handle Alt-Up for "cd .." here. ReadConsoleInput or
-  // PeekConsoleInput can get those I think. But we are called with mode set
-  // to ENABLE_LINE_INPUT so ReadConsoleW doesn't return until a full line is
-  // typed.
-  //
-  // Hmm, how is tab completion handled? It turns out the |control| is an
-  // escaper mechanism. The dwCtrlWakeupMask field contains |1 << control key|
-  // and this will also trigger a return. So, relatively easy workaround would
-  // be make the cd.. command bound to Ctrl-U (instead of Alt-Up), or that
-  // into the control.dwCtrlWakeupMask, and then if that was the last thing
-  // read then modify the working directory, and resume the read without
-  // notifying cmd.
-  //
-  // It'd be nice to have it work while in the middle of a command rather than
-  // only at the beginning of the line. That would probably mean returning
-  // just "\n" to cmd after setting the new working directory, and then
-  // reechoing the existing command. That in turn would mean having to
-  // actually keep a copy of what's actually been typed which probably isn't
-  // going to be too easy/bug free.
-  //
-  // Another option would be to more completely replace the functionality here
-  // so that we ReadConsoleInput one char at a time so that we get the
-  // events we want to handle, and then on \n, \t, etc. do pass back to cmd.
-  // I'm not sure where doskey editing fits in. If if's before it gets to us,
-  // that would work pretty well because we could just handle our keys as long
-  // as they get to us. [Tried this, ReadConsoleInput is pretty raw compared
-  // with ReadConsole and seems to be before doskey (or maybe doskey is even
-  // dispatched from ReadConsole?).]
-  //
-  // Further option would be to wholesale replace it, then we could fix
-  // various other editing things to be less annoying (quotes, tab completion
-  // in middle of line, etc.). But, kind of a lot of work. Would need to do:
-  // - typing & backspace
-  // - history? maybe and search in history (is that in doskey?)
-  // - ctrl-arrow skipping
-  // - tab completion
-  // And could add:
-  // - smarter tab completion (. prefixes, git branches, PATH, etc.)
-  // - Alt-Up
-  // - Alt-Left for "back" (save at each prompt)
-  // - history across sessions with better history search
-  // - smarter insert when tab in middle
-  // - ...
-
-  // printf and backspace, etc. get a little of the way here, but it seems
-  // like it's going to be better to use console apis. the main thing that
-  // printf gets is that it handles wrapping, scrolling the buffer up, etc.
-  // instead, figure out where we are when we start (cursor-wise), keep a
-  // buffer of the current line, scroll the console up to make space if
-  // necessary, and then output the line, reposition the cursor as necessary.
-  // store the cursor in line position and convert to screen as necessary.
-
   if (getenv("CMDEX_READCONSOLE")) {
     HANDLE conout =
         CreateFile("CONOUT$",
@@ -682,15 +677,15 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
     // the handle for console operations doesn't work (the various functions
     // return err=5 -- "The handle is invalid", but I'm not sure what handle
     // cmd is giving us here. It's probably wrong to just grab CONOUT$
-    // because we'll be doing interactive editing while things are redirected.
+    // because we'll be doing interactive editing while things are redirected,
+    // but on the other hand, this probably shouldn't be called in
+    // non-interactive mode.
     //CHECK(conout == GetStdHandle(STD_OUTPUT_HANDLE));
     *chars_read = 0;
     if (!g_directory_history) {
       RealWorkingDirectory* working_directory = new RealWorkingDirectory;
       g_directory_history = new DirectoryHistory(working_directory);
     }
-    if (!g_command_history)
-      g_command_history = new CommandHistory;
     if (!g_editor) {
       g_editor = new LineEditor;
       g_editor->RegisterCompleter(GitCommandNameCompleter);
@@ -1080,6 +1075,10 @@ void OnAttach(HMODULE self) {
 
   LoadGit2FunctionPointers(self);
   LoadDbgHelpFunctionPointers(self);
+
+  CHECK(!g_command_history);
+  g_command_history = new CommandHistory;
+  g_command_history->Populate(ReadHistoryFile());
 
   // Trap in GetDriveTypeW (this guards the call to WNetGetConnectionW we want
   // to override). When it's next called and it matches the callsite we want,

@@ -19,6 +19,8 @@ void LineEditor::Init(ConsoleInterface* console,
   directory_history_ = directory_history;
   directory_history_->StartingEdit();
   command_history_ = command_history;
+  line_.clear();
+  position_ = 0;
   RedrawConsole();
 }
 
@@ -66,6 +68,8 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       }
       return kIncomplete;
     } else if (!alt_down && !ctrl_down && vk == VK_RETURN) {
+      if (!line_.empty())
+        command_history_->AddCommand(line_);
       line_ += L"\x0d\x0a";
       int x, y;
       console_->GetCursorLocation(&x, &y);
@@ -117,7 +121,7 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       command_history_->MoveInHistory(-1, L"", &line_);
     } else if (!alt_down && !ctrl_down && vk == VK_DOWN) {
       command_history_->MoveInHistory(1, L"", &line_);
-    } else if (!alt_down && !ctrl_down && vk == VK_PRIOR) {
+    } else if (!alt_down && !ctrl_down && (vk == VK_PRIOR || vk == VK_F8)) {
       command_history_->MoveInHistory(-1, line_.substr(0, position_), &line_);
     } else if (!alt_down && !ctrl_down && vk == VK_NEXT) {
       command_history_->MoveInHistory(1, line_.substr(0, position_), &line_);
@@ -136,7 +140,7 @@ void LineEditor::ToCmdBuffer(wchar_t* buffer,
   if (!fake_command_.empty()) {
     wcscpy_s(buffer, buffer_size, fake_command_.c_str());
     *num_chars = fake_command_.size();
-    fake_command_ = L"";
+    fake_command_.clear();
   } else {
     wcscpy_s(buffer, buffer_size, line_.c_str());
     *num_chars = line_.size();

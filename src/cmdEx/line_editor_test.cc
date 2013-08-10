@@ -80,6 +80,13 @@ class LineEditorTest : public ::testing::Test {
     wd.Set("c:\\some\\stuff");
   }
 
+  void ReInit() {
+	wchar_t buf[256];
+	unsigned long num_chars;
+	le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
+    le.Init(&console, &dir_history, &cmd_history);
+  }
+
   void TypeLetters(const char* str) {
     for (size_t i = 0; i < strlen(str); ++i) {
       EXPECT_EQ(LineEditor::kIncomplete,
@@ -618,9 +625,213 @@ TEST_F(LineEditorTest, TabCompleteInMiddle) {
   EXPECT_EQ('d', console.GetCharAt(10, 0));
 }
 
-// F8, PgUp, PgDown, Up, Down for command history
+TEST_F(LineEditorTest, CommandHistoryUpDown) {
+  TypeLetters("abc");
+  EXPECT_EQ(
+      LineEditor::kReturnToCmd,
+      le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
+  ReInit();
+  TypeLetters("def");
+  EXPECT_EQ(
+      LineEditor::kReturnToCmd,
+      le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
+  ReInit();
+  TypeLetters("ghi");
+  EXPECT_EQ(
+      LineEditor::kReturnToCmd,
+      le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
+  ReInit();
+
+  EXPECT_EQ(0, console.cursor_x);
+  EXPECT_EQ(3, console.cursor_y);
+
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_UP, 0, VK_UP));
+  EXPECT_EQ('g', console.GetCharAt(0, 3));
+  EXPECT_EQ('h', console.GetCharAt(1, 3));
+  EXPECT_EQ('i', console.GetCharAt(2, 3));
+
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_UP, 0, VK_UP));
+  EXPECT_EQ('d', console.GetCharAt(0, 3));
+  EXPECT_EQ('e', console.GetCharAt(1, 3));
+  EXPECT_EQ('f', console.GetCharAt(2, 3));
+
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_UP, 0, VK_UP));
+  EXPECT_EQ('a', console.GetCharAt(0, 3));
+  EXPECT_EQ('b', console.GetCharAt(1, 3));
+  EXPECT_EQ('c', console.GetCharAt(2, 3));
+
+  // Wrap.
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_UP, 0, VK_UP));
+  EXPECT_EQ('g', console.GetCharAt(0, 3));
+  EXPECT_EQ('h', console.GetCharAt(1, 3));
+  EXPECT_EQ('i', console.GetCharAt(2, 3));
+
+  // Wrap down.
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_DOWN, 0, VK_DOWN));
+  EXPECT_EQ('a', console.GetCharAt(0, 3));
+  EXPECT_EQ('b', console.GetCharAt(1, 3));
+  EXPECT_EQ('c', console.GetCharAt(2, 3));
+
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_DOWN, 0, VK_DOWN));
+  EXPECT_EQ('d', console.GetCharAt(0, 3));
+  EXPECT_EQ('e', console.GetCharAt(1, 3));
+  EXPECT_EQ('f', console.GetCharAt(2, 3));
+}
+
+TEST_F(LineEditorTest, CommandHistoryCompleteUpDown) {
+  TypeLetters("abc");
+  EXPECT_EQ(
+      LineEditor::kReturnToCmd,
+      le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
+  ReInit();
+  TypeLetters("def");
+  EXPECT_EQ(
+      LineEditor::kReturnToCmd,
+      le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
+  ReInit();
+  TypeLetters("abxx");
+  EXPECT_EQ(
+      LineEditor::kReturnToCmd,
+      le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
+  ReInit();
+  TypeLetters("abzzz");
+  EXPECT_EQ(
+      LineEditor::kReturnToCmd,
+      le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
+  ReInit();
+
+  EXPECT_EQ(0, console.cursor_x);
+  EXPECT_EQ(4, console.cursor_y);
+
+  TypeLetters("ab");
+  EXPECT_EQ(2, console.cursor_x);
+
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_PRIOR, 0, VK_PRIOR));
+  EXPECT_EQ(2, console.cursor_x);
+  EXPECT_EQ('a', console.GetCharAt(0, 4));
+  EXPECT_EQ('b', console.GetCharAt(1, 4));
+  EXPECT_EQ('z', console.GetCharAt(2, 4));
+  EXPECT_EQ('z', console.GetCharAt(3, 4));
+  EXPECT_EQ('z', console.GetCharAt(4, 4));
+
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_PRIOR, 0, VK_PRIOR));
+  EXPECT_EQ(2, console.cursor_x);
+  EXPECT_EQ('a', console.GetCharAt(0, 4));
+  EXPECT_EQ('b', console.GetCharAt(1, 4));
+  EXPECT_EQ('x', console.GetCharAt(2, 4));
+  EXPECT_EQ('x', console.GetCharAt(3, 4));
+  EXPECT_EQ(' ', console.GetCharAt(4, 4));
+
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_PRIOR, 0, VK_PRIOR));
+  EXPECT_EQ(2, console.cursor_x);
+  EXPECT_EQ('a', console.GetCharAt(0, 4));
+  EXPECT_EQ('b', console.GetCharAt(1, 4));
+  EXPECT_EQ('c', console.GetCharAt(2, 4));
+  EXPECT_EQ(' ', console.GetCharAt(3, 4));
+  EXPECT_EQ(' ', console.GetCharAt(4, 4));
+
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_NEXT, 0, VK_NEXT));
+  EXPECT_EQ(2, console.cursor_x);
+  EXPECT_EQ('a', console.GetCharAt(0, 4));
+  EXPECT_EQ('b', console.GetCharAt(1, 4));
+  EXPECT_EQ('x', console.GetCharAt(2, 4));
+  EXPECT_EQ('x', console.GetCharAt(3, 4));
+  EXPECT_EQ(' ', console.GetCharAt(4, 4));
+
+  // F8 is the same as Page Up.
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_F8, 0, VK_F8));
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_F8, 0, VK_F8));
+  EXPECT_EQ(2, console.cursor_x);
+  EXPECT_EQ('a', console.GetCharAt(0, 4));
+  EXPECT_EQ('b', console.GetCharAt(1, 4));
+  EXPECT_EQ('z', console.GetCharAt(2, 4));
+  EXPECT_EQ('z', console.GetCharAt(3, 4));
+  EXPECT_EQ('z', console.GetCharAt(4, 4));
+}
+
+TEST_F(LineEditorTest, CommandHistorySaving) {
+  TypeLetters("abc");
+  EXPECT_EQ(
+      LineEditor::kReturnToCmd,
+      le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
+  ReInit();
+  TypeLetters("def");
+  EXPECT_EQ(
+      LineEditor::kReturnToCmd,
+      le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
+  ReInit();
+  TypeLetters("abxx");
+  EXPECT_EQ(
+      LineEditor::kReturnToCmd,
+      le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
+  ReInit();
+  TypeLetters("abzzz");
+  EXPECT_EQ(
+      LineEditor::kReturnToCmd,
+      le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
+  ReInit();
+
+  vector<wstring> saved = cmd_history.GetListForSaving();
+
+  cmd_history = CommandHistory();
+
+  cmd_history.Populate(saved);
+
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_UP, 0, VK_UP));
+  EXPECT_EQ('a', console.GetCharAt(0, 4));
+  EXPECT_EQ('b', console.GetCharAt(1, 4));
+  EXPECT_EQ('z', console.GetCharAt(2, 4));
+  EXPECT_EQ('z', console.GetCharAt(3, 4));
+  EXPECT_EQ('z', console.GetCharAt(4, 4));
+
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_UP, 0, VK_UP));
+  EXPECT_EQ('a', console.GetCharAt(0, 4));
+  EXPECT_EQ('b', console.GetCharAt(1, 4));
+  EXPECT_EQ('x', console.GetCharAt(2, 4));
+  EXPECT_EQ('x', console.GetCharAt(3, 4));
+  EXPECT_EQ(' ', console.GetCharAt(4, 4));
+
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_UP, 0, VK_UP));
+  EXPECT_EQ('d', console.GetCharAt(0, 4));
+  EXPECT_EQ('e', console.GetCharAt(1, 4));
+  EXPECT_EQ('f', console.GetCharAt(2, 4));
+  EXPECT_EQ(' ', console.GetCharAt(3, 4));
+  EXPECT_EQ(' ', console.GetCharAt(4, 4));
+}
+
 // Save command history to $CMDEX_HISTFILE
 // Ctrl-C to break line
-// Sort complete results somehow
+// Sort complete results somehow?
 // Ctrl-V to paste
 // Ctrl-Y (?) to copy line
+// Ctrl-K/U/Home/End for line kill
