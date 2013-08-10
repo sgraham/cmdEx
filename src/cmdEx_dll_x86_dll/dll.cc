@@ -663,7 +663,12 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
                                    DWORD buffer_size,
                                    LPDWORD chars_read,
                                    PCONSOLE_READCONSOLE_CONTROL control) {
-  if (getenv("CMDEX_READCONSOLE")) {
+  if (getenv("CMDEX_NOREADCONSOLE")) {
+    Log("non-overridden ReadConsole");
+    BOOL ret = ReadConsoleW(input, buffer, buffer_size, chars_read, control);
+    Log("returning %d", ret);
+    return ret;
+  } else {
     HANDLE conout =
         CreateFile("CONOUT$",
                    GENERIC_WRITE | GENERIC_READ,
@@ -752,11 +757,6 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
   done:
     CloseHandle(conout);
     return 1;
-  } else {
-    Log("non-overridden ReadConsole");
-    BOOL ret = ReadConsoleW(input, buffer, buffer_size, chars_read, control);
-    Log("returning %d", ret);
-    return ret;
   }
 }
 
