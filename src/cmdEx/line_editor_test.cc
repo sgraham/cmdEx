@@ -391,6 +391,58 @@ TEST_F(LineEditorTest, CtrlArrows) {
   EXPECT_EQ(17, console.cursor_x);
 }
 
+TEST_F(LineEditorTest, EndLineKill) {
+  TypeLetters("blorpy florpbag zorp");
+  for (int i = 0; i < 7; ++i)
+    EXPECT_EQ(LineEditor::kIncomplete,
+              le.HandleKeyEvent(true, false, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(13, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 'K', 0, 'K'));
+  for (int i = 13; i < 20; ++i)
+    EXPECT_EQ(' ', console.GetCharAt(i, 0));
+  EXPECT_EQ(LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, true, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, VK_END, 0, VK_END));
+  for (int i = 7; i < 20; ++i)
+    EXPECT_EQ(' ', console.GetCharAt(i, 0));
+}
+
+TEST_F(LineEditorTest, StartLineKill) {
+  TypeLetters("blorpy florpbag zorp");
+  for (int i = 0; i < 13; ++i)
+    EXPECT_EQ(LineEditor::kIncomplete,
+              le.HandleKeyEvent(true, false, false, false, 0, 0, VK_LEFT));
+  EXPECT_EQ(7, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 'U', 0, 'U'));
+  EXPECT_EQ(0, console.cursor_x);
+  EXPECT_EQ('f', console.GetCharAt(0, 0));
+  EXPECT_EQ('l', console.GetCharAt(1, 0));
+  EXPECT_EQ('o', console.GetCharAt(2, 0));
+  EXPECT_EQ('r', console.GetCharAt(3, 0));
+  EXPECT_EQ('p', console.GetCharAt(4, 0));
+  EXPECT_EQ('b', console.GetCharAt(5, 0));
+  EXPECT_EQ('a', console.GetCharAt(6, 0));
+  EXPECT_EQ('g', console.GetCharAt(7, 0));
+  EXPECT_EQ(' ', console.GetCharAt(8, 0));
+  EXPECT_EQ('z', console.GetCharAt(9, 0));
+  EXPECT_EQ('o', console.GetCharAt(10, 0));
+  EXPECT_EQ('r', console.GetCharAt(11, 0));
+  EXPECT_EQ('p', console.GetCharAt(12, 0));
+  EXPECT_EQ(LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, 0, 0, VK_END));
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, VK_HOME, 0, VK_HOME));
+  EXPECT_EQ(0, console.cursor_x);
+  for (int i = 0; i < 20; ++i)
+    EXPECT_EQ(' ', console.GetCharAt(i, 0));
+}
+
 TEST_F(LineEditorTest, EnteringCommandHasNewline) {
   TypeLetters("wee");
   EXPECT_EQ(LineEditor::kReturnToCmd,

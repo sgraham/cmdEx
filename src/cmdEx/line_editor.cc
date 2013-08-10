@@ -99,6 +99,11 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       if (position_ == static_cast<int>(line_.size()) || line_.empty())
         return kIncomplete;
       line_.erase(position_, 1);
+    } else if (!alt_down && ctrl_down && (vk == VK_END || vk == 'K')) {
+      line_.erase(position_, line_.size() - position_);
+    } else if (!alt_down && ctrl_down && (vk == VK_HOME || vk == 'U')) {
+      line_.erase(0, position_);
+      position_ = 0;
     } else if (!alt_down && !ctrl_down && vk == VK_LEFT) {
       position_ = max(0, position_ - 1);
     } else if (!alt_down && !ctrl_down && vk == VK_RIGHT) {

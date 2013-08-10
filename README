@@ -7,7 +7,7 @@ cmdEx makes some improvements to cmd.exe. Currently:
 - In PROMPT, $M displays git branch information instead of its normal function.
 - Suppress "Terminate batch job (Y/N)?" prompt (prompt isn't displayed, and
   the assumed answer is always 'y').
-- Experimental improvements to input handling (set CMDEX_READCONSOLE=1).
+- Improvements to input handling (set CMDEX_NOREADCONSOLE=1 to disable).
   Keybindings:
     - Alt-Up does "cd ..", maintaining current command.
     - Ctrl-W deletes back a word, Ctrl-Backspace deletes back a path
@@ -26,12 +26,12 @@ cmdEx makes some improvements to cmd.exe. Currently:
     - Escape clears the current line
     - Ctrl-A/Ctrl-E are the same as Home/End.
     - Ctrl-Left/Right jump by word
-
-Future features? (Not implemented yet)
-- Last 1000 commands are saved to %USERPROFILE%\_cmdex_history on 'exit',
-  and loaded on startup.
-- Up, Down, PgUp/F8, PgDown to navigate history.
-- Ctrl-U/Ctrl-K and Ctrl-Home/End to delete to start/end of line.
+    - Last 1000 commands are saved to %USERPROFILE%\_cmdex_history on 'exit',
+      and loaded on startup.
+    - Up, Down to move through history, PgUp/F8, PgDown to complete from
+      history based on current prefix.
+    - Ctrl-U/Ctrl-Home delete to beginning of line, Ctrl-K/Ctrl-End delete to
+      end of line.
 
 
 cmdEx is currently only known to work on Windows 7 and Windows 8, and only when
