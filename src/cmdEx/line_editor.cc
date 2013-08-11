@@ -22,6 +22,32 @@ void LineEditor::Init(ConsoleInterface* console,
   RedrawConsole();
 }
 
+bool IsModifierKey(int vk) {
+  // We don't want to do much when these are actually pressed, just when the
+  // other key they're pressed with is pressed. TODO: I'm sure there's some
+  // missing, not sure what the better way to do this is.
+  switch (vk) {
+    case VK_APPS:
+    case VK_CAPITAL:
+    case VK_CONTROL:
+    case VK_LCONTROL:
+    case VK_LMENU:
+    case VK_LSHIFT:
+    case VK_LWIN:
+    case VK_MENU:
+    case VK_NUMLOCK:
+    case VK_PAUSE:
+    case VK_RCONTROL:
+    case VK_RMENU:
+    case VK_RSHIFT:
+    case VK_RWIN:
+    case VK_SCROLL:
+    case VK_SHIFT:
+      return true;
+  }
+  return false;
+}
+
 LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
                                                     bool ctrl_down,
                                                     bool alt_down,
@@ -30,14 +56,13 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
                                                     unsigned short unicode_char,
                                                     int vk) {
   if (pressed) {
+    if (IsModifierKey(vk))
+      return kIncomplete;
     // Assume that it's not going to continue, and let tab handling put it
     // back on if it did continue. TODO: We hang on to results until next
     // completion which is kind of dumb.
     int previous_completion_begin = completion_word_begin_;
-    // TODO: This test sucks, need a better way to determine mode. Or at least
-    // many more dead keys here.
-    if (vk != VK_SHIFT && vk != VK_CONTROL && vk != VK_MENU && vk != VK_CAPITAL)
-      completion_word_begin_ = -1;
+    completion_word_begin_ = -1;
 
     if (alt_down && !ctrl_down && vk == VK_UP) {
       fake_command_ = L"cd..\x0d\x0a";

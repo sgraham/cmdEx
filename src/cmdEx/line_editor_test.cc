@@ -81,17 +81,20 @@ class LineEditorTest : public ::testing::Test {
   }
 
   void ReInit() {
-	wchar_t buf[256];
-	unsigned long num_chars;
-	le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
+    wchar_t buf[256];
+    unsigned long num_chars;
+    le.ToCmdBuffer(buf, sizeof(buf) / sizeof(wchar_t), &num_chars);
     le.Init(&console, &dir_history, &cmd_history);
   }
 
   void TypeLetters(const char* str) {
     for (size_t i = 0; i < strlen(str); ++i) {
+      int vk = 0;
+      int upper = toupper(str[i]);
+      if ((upper >= '0' && upper <= '9') || (upper >= 'A' && upper <= 'Z'))
+        vk = upper;
       EXPECT_EQ(LineEditor::kIncomplete,
-                le.HandleKeyEvent(
-                    true, false, false, false, str[i], 0, toupper(str[i])));
+                le.HandleKeyEvent(true, false, false, false, str[i], 0, vk));
     }
   }
 
@@ -441,6 +444,23 @@ TEST_F(LineEditorTest, StartLineKill) {
   EXPECT_EQ(0, console.cursor_x);
   for (int i = 0; i < 20; ++i)
     EXPECT_EQ(' ', console.GetCharAt(i, 0));
+}
+
+TEST_F(LineEditorTest, ModifiersDontSetCursorPosition) {
+  // Simulate scrolling somewhere.
+  console.cursor_x = 15;
+  console.cursor_y = 2;
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, true, false, false, VK_CONTROL, 0, VK_CONTROL));
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, true, false, VK_MENU, 0, VK_MENU));
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, true, VK_SHIFT, 0, VK_SHIFT));
+  EXPECT_EQ(15, console.cursor_x);
+  EXPECT_EQ(2, console.cursor_y);
 }
 
 TEST_F(LineEditorTest, EnteringCommandHasNewline) {
