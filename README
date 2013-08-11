@@ -33,6 +33,9 @@ cmdEx makes some improvements to cmd.exe. Currently:
     - Ctrl-U/Ctrl-Home delete to beginning of line, Ctrl-K/Ctrl-End delete to
       end of line.
 
+- TODO:
+  - Deadkeys (ctrl, alt, shift, etc.) cause a SetCursor which changes scroll
+    location, which is annoying when you're scrolled back.
 
 cmdEx is currently only known to work on Windows 7 and Windows 8, and only when
 using the x86 cmd.exe.

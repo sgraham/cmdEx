@@ -28,19 +28,19 @@ bool CommandHistory::MoveInHistory(int direction, const wstring& prefix, wstring
   if (commands_.empty())
     return false;
   CHECK(direction == -1 || direction == 1);
-  int original_position = position_;
+  int original_position = position_ % commands_.size();
   position_ += direction;
   for (;;) {
     if (position_ < 0)
       position_ = commands_.size() - 1;
     if (position_ >= static_cast<int>(commands_.size()))
       position_ = 0;
-    if (position_ == original_position)
-      return false;
     if (prefix.empty())
       break;
     if (commands_[position_].substr(0, prefix.size()) == prefix)
       break;
+    if (position_ == original_position)
+      return false;
     position_ += direction;
   }
   *result = commands_[position_];
