@@ -308,6 +308,42 @@ TEST_F(LineEditorTest, KillCtrlBack) {
   EXPECT_EQ(' ', console.GetCharAt(0, 0));
 }
 
+TEST_F(LineEditorTest, KillBackWordStart) {
+  TypeLetters("abc stuff things");
+  EXPECT_EQ(16, console.cursor_x);
+  for (int i = 0; i < 6; ++i) {
+    EXPECT_EQ(LineEditor::kIncomplete,
+              le.HandleKeyEvent(true, false, false, false, 0, 0, VK_LEFT));
+  }
+  EXPECT_EQ(10, console.cursor_x);
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, 'W'));
+  EXPECT_EQ(4, console.cursor_x);
+  EXPECT_EQ('a', console.GetCharAt(0, 0));
+  EXPECT_EQ('b', console.GetCharAt(1, 0));
+  EXPECT_EQ('c', console.GetCharAt(2, 0));
+  EXPECT_EQ(' ', console.GetCharAt(3, 0));
+  EXPECT_EQ('t', console.GetCharAt(4, 0));
+  EXPECT_EQ('h', console.GetCharAt(5, 0));
+  EXPECT_EQ('i', console.GetCharAt(6, 0));
+  EXPECT_EQ('n', console.GetCharAt(7, 0));
+  EXPECT_EQ('g', console.GetCharAt(8, 0));
+  EXPECT_EQ('s', console.GetCharAt(9, 0));
+  EXPECT_EQ(' ', console.GetCharAt(10, 0));
+
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, true, false, false, 0, 0, VK_BACK));
+  EXPECT_EQ(0, console.cursor_x);
+  EXPECT_EQ('t', console.GetCharAt(0, 0));
+  EXPECT_EQ('h', console.GetCharAt(1, 0));
+  EXPECT_EQ('i', console.GetCharAt(2, 0));
+  EXPECT_EQ('n', console.GetCharAt(3, 0));
+  EXPECT_EQ('g', console.GetCharAt(4, 0));
+  EXPECT_EQ('s', console.GetCharAt(5, 0));
+  EXPECT_EQ(' ', console.GetCharAt(6, 0));
+}
+
 TEST_F(LineEditorTest, ClearScreen) {
   console.cursor_x = 10;
   console.cursor_y = 5;

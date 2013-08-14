@@ -107,7 +107,7 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       position_--;
       line_.erase(position_, 1);
     } else if (!alt_down && ctrl_down && vk == 'W') {
-      int from = FindBackwards(position_, " ");
+      int from = FindBackwards(max(0, position_ - 1), " ");
       line_.erase(from, position_ - from);
       position_ = from;
     } else if (!alt_down && !ctrl_down && vk == VK_TAB) {
@@ -115,7 +115,7 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       completion_word_begin_ = previous_completion_begin;
       TabComplete(!shift_down);
     } else if (!alt_down && ctrl_down && vk == VK_BACK) {
-      int from = FindBackwards(position_, " /\\");
+      int from = FindBackwards(max(0, position_ - 1), " /\\");
       line_.erase(from, position_ - from);
       position_ = from;
     } else if (!alt_down && !ctrl_down && vk == VK_DELETE) {
