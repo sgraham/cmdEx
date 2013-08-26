@@ -75,7 +75,6 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
           (vk == VK_LEFT || vk == VK_BROWSER_BACK) ? -1 : 1);
       if (changed) {
         fake_command_ = L"\x0d\x0a";
-        printf("\n");
         return kReturnToCmdThenResume;
       }
       return kIncomplete;
@@ -96,7 +95,7 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       line_ += L"\x0d\x0a";
       int x, y;
       console_->GetCursorLocation(&x, &y);
-      console_->SetCursorLocation(0, y + 1);
+      start_y_ += console_->SetCursorLocation(0, y + 1);
       return kReturnToCmd;
     } else if (!alt_down && !ctrl_down && vk == VK_ESCAPE) {
       line_ = L"";
@@ -240,8 +239,10 @@ void LineEditor::RedrawConsole() {
       start_x_,
       start_y_,
       width);
+  // TODO: At the bottom of the buffer
   int last_drawn_x = start_x_;
   int last_drawn_y = start_y_;
+  int modify_start_y_by = 0;
   for (size_t i = 0; i < chunks.size(); ++i) {
     const LineChunk& chunk = chunks[i];
     size_t to_draw = chunk.contents.size();
@@ -256,17 +257,21 @@ void LineEditor::RedrawConsole() {
     if (position_ >= chunk.start_offset &&
         position_ <
             chunk.start_offset + static_cast<int>(chunk.contents.size())) {
-      console_->SetCursorLocation(
-          chunk.start_x + (position_ - chunk.start_offset), chunk.start_y);
+      modify_start_y_by += console_->SetCursorLocation(
+          chunk.start_x + (position_ - chunk.start_offset),
+          chunk.start_y + modify_start_y_by);
     }
   }
+  start_y_ += modify_start_y_by;
+  largest_y_ += modify_start_y_by;
 
   int clear_from = last_drawn_x;
   for (int y = last_drawn_y; y <= largest_y_; ++y) {
     console_->FillChar(L' ', width - clear_from, clear_from, y);
     clear_from = 0;
   }
-  largest_y_ = chunks.empty() ? start_y_ : chunks.back().start_y;
+  largest_y_ =
+      chunks.empty() ? start_y_ : chunks.back().start_y + modify_start_y_by;
 }
 
 int LineEditor::FindBackwards(int start_at, const char* until) {

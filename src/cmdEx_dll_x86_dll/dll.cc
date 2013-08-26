@@ -354,9 +354,25 @@ class RealConsole : public ConsoleInterface {
     FillConsoleOutputCharacterW(console_, ch, count, coord, &written);
   }
 
-  virtual void SetCursorLocation(int x, int y) override {
+  virtual int SetCursorLocation(int x, int y) override {
+    CONSOLE_SCREEN_BUFFER_INFO screen_buffer_info;
+    PCHECK(GetConsoleScreenBufferInfo(console_, &screen_buffer_info));
+    SHORT width = screen_buffer_info.dwSize.X;
+    SHORT height = screen_buffer_info.dwSize.Y;
+    int to_move_start_y = 0;
+    while (y >= height) {
+      SMALL_RECT scroll_rect = {0, 1, width, height - 1};
+      COORD dest_coord = {0, 0};
+      CHAR_INFO fill_with = {' ', FOREGROUND_RED | FOREGROUND_GREEN |
+                                      FOREGROUND_BLUE};
+      PCHECK(ScrollConsoleScreenBuffer(
+          console_, &scroll_rect, NULL, dest_coord, &fill_with));
+      --y;
+      --to_move_start_y;
+    }
     COORD coord = { static_cast<SHORT>(x), static_cast<SHORT>(y) };
     PCHECK(SetConsoleCursorPosition(console_, coord));
+    return to_move_start_y;
   }
 
  private:

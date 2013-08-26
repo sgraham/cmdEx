@@ -57,9 +57,10 @@ class MockConsoleInterface : public ConsoleInterface {
     for (int i = 0; i < count; ++i)
       screen_data[y * width + x + i] = ch;
   }
-  virtual void SetCursorLocation(int x, int y) {
+  virtual int SetCursorLocation(int x, int y) {
     cursor_x = x;
     cursor_y = y;
+    return 0;  // TODO(scottmg): Test for this.
   }
 
   wchar_t GetCharAt(int x, int y) {

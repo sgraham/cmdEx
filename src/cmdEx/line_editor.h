@@ -20,7 +20,8 @@ class ConsoleInterface {
   // |str| not null terminated.
   virtual void DrawString(const wchar_t* str, int count, int x, int y) = 0;
   virtual void FillChar(wchar_t ch, int count, int x, int y) = 0;
-  virtual void SetCursorLocation(int x, int y) = 0;
+  // Return is amount adjust start_y (when console has been scrolled).
+  virtual int SetCursorLocation(int x, int y) = 0;
 };
 
 class LineEditor {
