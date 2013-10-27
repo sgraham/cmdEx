@@ -1,7 +1,7 @@
 def DEP_libgit2(action):
   if action == 'sync':
     GitPullOrClone('https://github.com/libgit2/libgit2.git')
-    Run(['cmake', '-G', 'Visual Studio 11', '-DSTDCALL=Off'],
+    Run(['cmake', '-G', 'Visual Studio 12', '-DSTDCALL=Off'],
         cwd='third_party/libgit2')
     Run(['devenv.com', 'libgit2.sln', '/Build', 'Release'],
         cwd='third_party/libgit2')

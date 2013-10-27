@@ -6,6 +6,8 @@
 
 #include <windows.h>
 
+#include <algorithm>
+
 #include "cmdEx/command_history.h"
 #include "cmdEx/directory_history.h"
 #include "common/util.h"

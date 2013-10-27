@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 
 #pragma warning(disable: 4530)
+#include <algorithm>
 #include <string>
 #include <vector>
 
