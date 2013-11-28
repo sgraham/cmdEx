@@ -42,6 +42,7 @@ TODO:
 - Complete ninja targets with
     ninja -C out\Debug -t targets all | awk -F: "{print $1}"
 - Save history more often, and maybe share between instances somehow.
+- Ctrl-C should do something for when killing didn't end up at a clean line.
 
 
 cmdEx is currently only known to work on Windows 7, 8, and 8.1, and only when
