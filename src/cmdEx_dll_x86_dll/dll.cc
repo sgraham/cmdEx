@@ -19,6 +19,7 @@
 #include "cmdEx/directory_history.h"
 #include "cmdEx/line_editor.h"
 #include "cmdEx/string_util.h"
+#include "cmdEx/subprocess.h"
 #include "common/util.h"
 #include "git2.h"
 
@@ -380,6 +381,50 @@ class RealConsole : public ConsoleInterface {
   HANDLE console_;
 };
 
+static bool NinjaTargetCompleter(const CompleterInput& input,
+                                 vector<wstring>* results) {
+  if (input.word_data.size() > 1 &&
+      input.word_data[0].deescaped_word == L"ninja") {
+    // We do the equivalent of
+    //   ninja -t targets all | awk -F: "{print $1}"
+    // If there's a "-C something", we need to include that in the run of our
+    // ninja subprocess.
+    wstring command = L"ninja";
+    for (size_t i = 1; i < input.word_data.size() - 1; ++i) {
+      if (input.word_data[i].deescaped_word == L"-C") {
+        // If we're in the -C command though, we don't want to complete here at
+        // all, and instead get directory completion.
+        if (input.word_index == static_cast<int>(i) ||
+            input.word_index == static_cast<int>(i + 1)) {
+          return false;
+        }
+        command += L" -C " + input.word_data[i + 1].original_word;
+        break;
+      }
+    }
+    // Note that this must go after the -C arg if any.
+    command += L" -t targets all";
+
+    SubprocessSet subprocs;
+    Subprocess* subproc = subprocs.Add(command);
+    while (!subproc->Done())
+      subprocs.DoWork();
+
+    if (subproc->Finish() == ExitSuccess) {
+      bool no_command = input.word_data.size() == 1;
+      const wstring prefix =
+          no_command ? L"" : input.word_data[input.word_index].deescaped_word;
+      for (const auto& line : StringSplit(subproc->GetOutput(), L'\n')) {
+        wstring target = StringSplit(line, L':')[0];
+        if (target.substr(0, prefix.size()) == prefix)
+          results->push_back(target + L" ");
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 // TODO: Search for git-xyz in path too. Should include .sh in addition to
 // PATHEXT
 static const wchar_t* kGitCommandsPorcelain[] = {
@@ -712,6 +757,7 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
     }
     if (!g_editor) {
       g_editor = new LineEditor;
+      g_editor->RegisterCompleter(NinjaTargetCompleter);
       g_editor->RegisterCompleter(GitCommandNameCompleter);
       g_editor->RegisterCompleter(GitCommandArgCompleter);
       g_editor->RegisterCompleter(CommandInPathCompleter);
