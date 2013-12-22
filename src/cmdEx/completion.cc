@@ -129,3 +129,8 @@ int CompletionWordIndex(const vector<WordData>& word_data, int position) {
   }
   return result;
 }
+
+wstring QuoteWord(const wstring& input) {
+  // TODO
+  return input;
+}

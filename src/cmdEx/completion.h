@@ -31,4 +31,6 @@ void CompletionBreakIntoWords(const wstring& line,
 
 int CompletionWordIndex(const vector<WordData>& word_data, int position);
 
+wstring QuoteWord(const wstring& input);
+
 #endif  // CMDEX_COMPLETION_H_

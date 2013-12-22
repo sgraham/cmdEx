@@ -398,7 +398,7 @@ static bool NinjaTargetCompleter(const CompleterInput& input,
             input.word_index == static_cast<int>(i + 1)) {
           return false;
         }
-        command += L" -C " + input.word_data[i + 1].original_word;
+        command += L" -C " + input.word_data[i + 1].deescaped_word;
         break;
       }
     }
