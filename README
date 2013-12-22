@@ -36,12 +36,14 @@ cmdEx makes some improvements to cmd.exe. Currently:
 
 TODO:
 
-- Make Ctrl-V paste maybe?
+- Make Ctrl-V paste maybe? (possibly prompt if clipboard contains > 1 \n)
 - Multiline F8 doesn't redraw properly
 - I keep wanting Ctrl-Del to do something, but I'm not sure what. I think
   delete word to the right.
 - Save history more often, and maybe share between instances somehow.
 - Ctrl-C should do something for when killing didn't end up at a clean line.
+  _CtrlCAbort@0 in cmd traps Ctrl-C right now I think, so we don't get it in
+  line editor.
 - Spaced files are parsed properly, but don't get quoted on re-insert.
 - Autocomplete after "set ".
 
