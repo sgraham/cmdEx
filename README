@@ -18,8 +18,8 @@ cmdEx makes some improvements to cmd.exe. Currently:
       (contextually), built-ins and commands in path are completed, git
       subcommands are completed, and some git subcommands have arguments and
       context-sensitive completion (e.g. "git checkout o<TAB>" might complete
-      to "git checkout origin/master").
-    - Tab completion for ninja targets.
+      to "git checkout origin/master"). Target names are also completed for
+      the ninja build tool.
     - Ctrl-Enter opens an Explorer window in the current directory.
     - Ctrl-L clears the console and puts the current command at the top of the
       window.
