@@ -76,7 +76,8 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       bool changed = directory_history_->NavigateInHistory(
           (vk == VK_LEFT || vk == VK_BROWSER_BACK) ? -1 : 1);
       if (changed) {
-        fake_command_ = L"\x0d\x0a";
+        // cd . is necessary to get a newline.
+        fake_command_ = L"cd .\x0d\x0a";
         return kReturnToCmdThenResume;
       }
       return kIncomplete;
