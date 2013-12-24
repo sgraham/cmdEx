@@ -150,7 +150,7 @@ int CompletionWordIndex(const vector<WordData>& word_data, int position) {
 
 // ref: http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/04/23/everyone-quotes-arguments-the-wrong-way.aspx
 // This only does the CommandLineToArgvW part, because when you're editing a
-// cmd command, it's not clear when you want metchar escaping.
+// cmd command, it's not clear when you want metachar escaping.
 wstring QuoteWord(const std::wstring& argument) {
   // Don't quote unless we actually need to.
   if (!argument.empty() &&
