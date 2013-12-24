@@ -242,5 +242,12 @@ TEST(CompletionTest, MergeStartingSlashWithTrailingQuote) {
   EXPECT_EQ(L"\"C:\\Program Files (x86)\"\\", words[0].original_word);
 }
 
+TEST(CompletionTest, Quoting) {
+  EXPECT_EQ(L"stuff", QuoteWord(L"stuff"));
+  EXPECT_EQ(L"\"st uff\"", QuoteWord(L"st uff"));
+  EXPECT_EQ(L"\"\\\"st uff\\\"\"", QuoteWord(L"\"st uff\""));
+  EXPECT_EQ(L"\"st uff\\\\\"", QuoteWord(L"st uff\\"));
+}
+
 // TODO
 // - special executable handling

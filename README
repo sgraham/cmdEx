@@ -44,7 +44,6 @@ TODO:
 - Ctrl-C should do something for when killing didn't end up at a clean line.
   _CtrlCAbort@0 in cmd traps Ctrl-C right now I think, so we don't get it in
   line editor.
-- QuoteWord is a hack (used when re-inserting completed arguments).
 - Autocomplete after "set ".
 
 

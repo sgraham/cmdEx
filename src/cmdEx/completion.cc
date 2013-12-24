@@ -148,12 +148,39 @@ int CompletionWordIndex(const vector<WordData>& word_data, int position) {
   return result;
 }
 
-wstring QuoteWord(const wstring& input) {
-  if (input.find(L' ') == wstring::npos)
-    return input;
-  // TODO: All wrong.
-  if (input[input.size() - 1] == L'\\') {
-    return L'"' + input + L"\\\"";
+// ref: http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/04/23/everyone-quotes-arguments-the-wrong-way.aspx
+// This only does the CommandLineToArgvW part, because when you're editing a
+// cmd command, it's not clear when you want metchar escaping.
+wstring QuoteWord(const std::wstring& argument) {
+  // Don't quote unless we actually need to.
+  if (!argument.empty() &&
+      argument.find_first_of(L" \t\n\v\"") == argument.npos) {
+    return argument;
+  } else {
+    wstring result;
+    result.push_back(L'"');
+    for (std::wstring::const_iterator it = argument.begin();; ++it) {
+      int num_backslashes = 0;
+      while (it != argument.end() && *it == L'\\') {
+        ++it;
+        ++num_backslashes;
+      }
+      if (it == argument.end()) {
+        // Escape all backslashes, but let the terminating double quotation
+        // mark we add below be interpreted as a metacharacter.
+        result.append(num_backslashes * 2, L'\\');
+        break;
+      } else if (*it == L'"') {
+        // Escape all backslashes and the following double quotation mark.
+        result.append(num_backslashes * 2 + 1, L'\\');
+        result.push_back(*it);
+      } else {
+        // Backslashes aren't special here.
+        result.append(num_backslashes, L'\\');
+        result.push_back(*it);
+      }
+    }
+    result.push_back(L'"');
+    return result;
   }
-  return L'"' + input + L'"';
 }
