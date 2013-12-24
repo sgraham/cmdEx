@@ -344,10 +344,9 @@ void LineEditor::TabComplete(bool forward_cycle) {
   position_ = completion_word_begin_;
 
   // Insert the new one.
-  line_.insert(completion_word_begin_,
-               QuoteWord(completion_results_[completion_index_]));
-  position_ =
-      completion_word_begin_ + completion_results_[completion_index_].size();
+  wstring quoted = QuoteWord(completion_results_[completion_index_]);
+  line_.insert(completion_word_begin_, quoted);
+  position_ = completion_word_begin_ + quoted.size();
   completion_word_end_ = position_;
   RedrawConsole();
 }

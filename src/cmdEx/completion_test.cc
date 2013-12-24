@@ -235,5 +235,12 @@ TEST(CompletionTest, BreakIntoWordsEscapedConsecutiveQuotes) {
   EXPECT_EQ(L"quotes", words[2].deescaped_word);
 }
 
+TEST(CompletionTest, MergeStartingSlashWithTrailingQuote) {
+  vector<WordData> words;
+  CompletionBreakIntoWords(L"\"C:\\Program Files (x86)\"\\", &words);
+  EXPECT_EQ(1, words.size());
+  EXPECT_EQ(L"\"C:\\Program Files (x86)\"\\", words[0].original_word);
+}
+
 // TODO
 // - special executable handling

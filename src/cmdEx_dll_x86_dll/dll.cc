@@ -661,12 +661,7 @@ static void FindFiles(const wstring& prefix,
         continue;
       if (!dir_only || (dir_only && (find_data.dwFileAttributes &
                                      FILE_ATTRIBUTE_DIRECTORY))) {
-        // TODO: Quoting.
-        if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-          results->push_back(prepend + find_data.cFileName +
-                             (command_is_git ? L"/" : L"\\"));
-        else
-          results->push_back(prepend + find_data.cFileName);
+        results->push_back(prepend + find_data.cFileName);
       }
     } while (FindNextFileW(handle, &find_data));
     FindClose(handle);

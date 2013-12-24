@@ -118,6 +118,24 @@ void CompletionBreakIntoWords(const wstring& line,
                        word_data->at(num_args - 1).original_word.size())) {
     CopyArg(line_start, p, p, word_data);
   }
+
+  // Hack for completing
+  //   "C:\Program Files (x86)"\
+  // CommandLineToArgvW will split the trailing \ into a second argument. In
+  // order to match cmd's completion behaviour, merge an argument that's
+  // immediately attached and starts with a \ back into the one before it.
+  for (size_t i = 0; i < word_data->size() - 1; ++i) {
+    WordData* first = &word_data->at(i);
+    WordData* second = &word_data->at(i + 1);
+    if (second->original_word[0] == L'\\' &&
+        first->original_offset + first->original_word.size() ==
+            static_cast<size_t>(second->original_offset)) {
+      // Merge second onto first and remove second.
+      first->original_word += second->original_word;
+      first->deescaped_word += second->deescaped_word;
+      word_data->erase(word_data->begin() + i + 1);
+    }
+  }
 }
 
 int CompletionWordIndex(const vector<WordData>& word_data, int position) {
@@ -131,6 +149,11 @@ int CompletionWordIndex(const vector<WordData>& word_data, int position) {
 }
 
 wstring QuoteWord(const wstring& input) {
-  // TODO
-  return input;
+  if (input.find(L' ') == wstring::npos)
+    return input;
+  // TODO: All wrong.
+  if (input[input.size() - 1] == L'\\') {
+    return L'"' + input + L"\\\"";
+  }
+  return L'"' + input + L'"';
 }
