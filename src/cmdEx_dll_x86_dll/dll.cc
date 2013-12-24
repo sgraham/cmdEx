@@ -381,50 +381,6 @@ class RealConsole : public ConsoleInterface {
   HANDLE console_;
 };
 
-static bool NinjaTargetCompleter(const CompleterInput& input,
-                                 vector<wstring>* results) {
-  if (input.word_data.size() > 1 &&
-      input.word_data[0].deescaped_word == L"ninja") {
-    // We do the equivalent of
-    //   ninja -t targets all | awk -F: "{print $1}"
-    // If there's a "-C something", we need to include that in the run of our
-    // ninja subprocess.
-    wstring command = L"ninja";
-    for (size_t i = 1; i < input.word_data.size() - 1; ++i) {
-      if (input.word_data[i].deescaped_word == L"-C") {
-        // If we're in the -C command though, we don't want to complete here at
-        // all, and instead get directory completion.
-        if (input.word_index == static_cast<int>(i) ||
-            input.word_index == static_cast<int>(i + 1)) {
-          return false;
-        }
-        command += L" -C " + input.word_data[i + 1].deescaped_word;
-        break;
-      }
-    }
-    // Note that this must go after the -C arg if any.
-    command += L" -t targets all";
-
-    SubprocessSet subprocs;
-    Subprocess* subproc = subprocs.Add(command);
-    while (!subproc->Done())
-      subprocs.DoWork();
-
-    if (subproc->Finish() == ExitSuccess) {
-      bool no_command = input.word_data.size() == 1;
-      const wstring prefix =
-          no_command ? L"" : input.word_data[input.word_index].deescaped_word;
-      for (const auto& line : StringSplit(subproc->GetOutput(), L'\n')) {
-        wstring target = StringSplit(line, L':')[0];
-        if (target.substr(0, prefix.size()) == prefix)
-          results->push_back(target + L" ");
-      }
-      return true;
-    }
-  }
-  return false;
-}
-
 // TODO: Search for git-xyz in path too. Should include .sh in addition to
 // PATHEXT
 static const wchar_t* kGitCommandsPorcelain[] = {
@@ -533,6 +489,75 @@ static bool GitCommandArgCompleter(const CompleterInput& input,
       if (GitRefsHelper(input, input.word_data[2].deescaped_word, results))
         return true;
     }
+  }
+  return false;
+}
+
+static bool NinjaTargetCompleter(const CompleterInput& input,
+                                 vector<wstring>* results) {
+  if (input.word_data.size() > 1 &&
+      input.word_data[0].deescaped_word == L"ninja") {
+    // We do the equivalent of
+    //   ninja -t targets all | awk -F: "{print $1}"
+    // If there's a "-C something", we need to include that in the run of our
+    // ninja subprocess.
+    wstring command = L"ninja";
+    for (size_t i = 1; i < input.word_data.size() - 1; ++i) {
+      if (input.word_data[i].deescaped_word == L"-C") {
+        // If we're in the -C command though, we don't want to complete here at
+        // all, and instead get directory completion.
+        if (input.word_index == static_cast<int>(i) ||
+            input.word_index == static_cast<int>(i + 1)) {
+          return false;
+        }
+        command += L" -C " + input.word_data[i + 1].deescaped_word;
+        break;
+      }
+    }
+    // Note that this must go after the -C arg if any.
+    command += L" -t targets all";
+
+    SubprocessSet subprocs;
+    Subprocess* subproc = subprocs.Add(command);
+    while (!subproc->Done())
+      subprocs.DoWork();
+
+    if (subproc->Finish() == ExitSuccess) {
+      bool no_command = input.word_data.size() == 1;
+      const wstring prefix =
+          no_command ? L"" : input.word_data[input.word_index].deescaped_word;
+      for (const auto& line : StringSplit(subproc->GetOutput(), L'\n')) {
+        wstring target = StringSplit(line, L':')[0];
+        if (target.substr(0, prefix.size()) == prefix)
+          results->push_back(target + L" ");
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool EnvironmentVariableCompleter(const CompleterInput& input,
+                                         vector<wstring>* results) {
+  if (input.word_data.size() > 1 &&
+      input.word_data[0].deescaped_word == L"set" && input.word_index == 1) {
+    const wchar_t* environment_block = ::GetEnvironmentStringsW();
+    size_t i;
+    for (i = 0; ; ++i)
+      if (environment_block[i] == 0 && environment_block[i + 1] == 0)
+        break;
+    wstring full_block(environment_block, i + 1);
+    vector<wstring> var_and_settings = StringSplit(full_block, L'\0');
+    const wstring& prefix = input.word_data[1].deescaped_word;
+    for (const auto& var_and_setting : var_and_settings) {
+      wstring variable = StringSplit(var_and_setting, L'=')[0];
+      if (variable.empty())
+        continue;
+      if (_wcsnicmp(variable.c_str(), prefix.c_str(), prefix.size()) == 0)
+        results->push_back(variable);  // Intentionally no trailing space.
+    }
+    ::FreeEnvironmentStringsW(const_cast<wchar_t*>(environment_block));
+    return true;
   }
   return false;
 }
@@ -755,6 +780,7 @@ BOOL WINAPI ReadConsoleReplacement(HANDLE input,
       g_editor->RegisterCompleter(NinjaTargetCompleter);
       g_editor->RegisterCompleter(GitCommandNameCompleter);
       g_editor->RegisterCompleter(GitCommandArgCompleter);
+      g_editor->RegisterCompleter(EnvironmentVariableCompleter);
       g_editor->RegisterCompleter(CommandInPathCompleter);
       g_editor->RegisterCompleter(DirectoryCompleter);
       g_editor->RegisterCompleter(FilenameCompleter);

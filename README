@@ -19,7 +19,7 @@ cmdEx makes some improvements to cmd.exe. Currently:
       subcommands are completed, and some git subcommands have arguments and
       context-sensitive completion (e.g. "git checkout o<TAB>" might complete
       to "git checkout origin/master"). Target names are also completed for
-      the ninja build tool.
+      the ninja build tool. Environment variables are completed after "set".
     - Ctrl-Enter opens an Explorer window in the current directory.
     - Ctrl-L clears the console and puts the current command at the top of the
       window.
@@ -44,7 +44,6 @@ TODO:
 - Ctrl-C should do something for when killing didn't end up at a clean line.
   _CtrlCAbort@0 in cmd traps Ctrl-C right now I think, so we don't get it in
   line editor.
-- Autocomplete after "set ".
 
 
 cmdEx is currently only known to work on Windows 7, 8, and 8.1, and only when
