@@ -540,14 +540,14 @@ TEST_F(LineEditorTest, MultilineClearOnKillBack) {
       EXPECT_EQ(' ', console.GetCharAt(x, y));
 }
 
-bool MockCompleterBasic(const CompleterInput& input, vector<wstring>* results) {
+bool MockCompleterBasic(const CompleterInput& input, CompleterOutput* output) {
   EXPECT_EQ(L"hi", input.word_data[0].original_word);
   EXPECT_EQ(L"ab", input.word_data[1].original_word);
   EXPECT_EQ(1, input.word_index);
   EXPECT_EQ(2, input.position_in_word);
-  results->push_back(L"abxxx");
-  results->push_back(L"abyyyyy");
-  results->push_back(L"abz");
+  output->results.push_back(L"abxxx");
+  output->results.push_back(L"abyyyyy");
+  output->results.push_back(L"abz");
   return true;
 }
 
@@ -695,15 +695,15 @@ TEST_F(LineEditorTest, TabCompleteStopsAfterNonTab) {
 }
 
 bool MockCompleterInMiddle(const CompleterInput& input,
-                           vector<wstring>* results) {
+                           CompleterOutput* output) {
   EXPECT_EQ(L"hi", input.word_data[0].original_word);
   EXPECT_EQ(L"ab", input.word_data[1].original_word);
   EXPECT_EQ(L"cdefghi", input.word_data[2].original_word);
   EXPECT_EQ(1, input.word_index);
   EXPECT_EQ(1, input.position_in_word);
-  results->push_back(L"abxxx");
-  results->push_back(L"abyyyyy");
-  results->push_back(L"abz");
+  output->results.push_back(L"abxxx");
+  output->results.push_back(L"abyyyyy");
+  output->results.push_back(L"abz");
   return true;
 }
 

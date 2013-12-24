@@ -87,7 +87,7 @@ class LineEditor {
   int completion_word_begin_;
   int completion_word_end_;
   int completion_index_;
-  vector<wstring> completion_results_;
+  CompleterOutput completion_output_;
 };
 
 #endif  // CMDEX_LINE_EDITOR_H_

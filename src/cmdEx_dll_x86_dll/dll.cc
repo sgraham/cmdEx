@@ -392,7 +392,7 @@ static const wchar_t* kGitCommandsPorcelain[] = {
 };
 
 static bool GitCommandNameCompleter(const CompleterInput& input,
-                                    vector<wstring>* results) {
+                                    CompleterOutput* output) {
   if (input.word_data.size() > 1 &&
       input.word_data[0].deescaped_word == L"git") {
     bool in_word_one = input.word_index == 1;
@@ -403,7 +403,7 @@ static bool GitCommandNameCompleter(const CompleterInput& input,
       for (size_t i = 0; i < ARRAYSIZE(kGitCommandsPorcelain); ++i) {
         wstring tmp = kGitCommandsPorcelain[i];
         if (tmp.substr(0, prefix.size()) == prefix)
-          results->push_back(tmp + L" ");
+          output->results.push_back(tmp + L" ");
       }
       return true;
     }
@@ -471,7 +471,7 @@ static bool GitRefsHelper(const CompleterInput& input,
 }
 
 static bool GitCommandArgCompleter(const CompleterInput& input,
-                                   vector<wstring>* results) {
+                                   CompleterOutput* output) {
   if (input.word_data.size() > 2 &&
       input.word_data[0].deescaped_word == L"git") {
     if (input.word_data[1].deescaped_word == L"checkout") {
@@ -484,9 +484,10 @@ static bool GitCommandArgCompleter(const CompleterInput& input,
                               input.word_data[2].deescaped_word,
                               kCheckoutLongArgs,
                               ARRAYSIZE(kCheckoutLongArgs),
-                              results))
+                              &output->results))
         return true;
-      if (GitRefsHelper(input, input.word_data[2].deescaped_word, results))
+      if (GitRefsHelper(
+              input, input.word_data[2].deescaped_word, &output->results))
         return true;
     }
   }
@@ -494,7 +495,7 @@ static bool GitCommandArgCompleter(const CompleterInput& input,
 }
 
 static bool NinjaTargetCompleter(const CompleterInput& input,
-                                 vector<wstring>* results) {
+                                 CompleterOutput* output) {
   if (input.word_data.size() > 1 &&
       input.word_data[0].deescaped_word == L"ninja") {
     // We do the equivalent of
@@ -529,7 +530,7 @@ static bool NinjaTargetCompleter(const CompleterInput& input,
       for (const auto& line : StringSplit(subproc->GetOutput(), L'\n')) {
         wstring target = StringSplit(line, L':')[0];
         if (target.substr(0, prefix.size()) == prefix)
-          results->push_back(target + L" ");
+          output->results.push_back(target + L" ");
       }
       return true;
     }
@@ -538,7 +539,7 @@ static bool NinjaTargetCompleter(const CompleterInput& input,
 }
 
 static bool EnvironmentVariableCompleter(const CompleterInput& input,
-                                         vector<wstring>* results) {
+                                         CompleterOutput* output) {
   if (input.word_data.size() > 1 &&
       input.word_data[0].deescaped_word == L"set" && input.word_index == 1) {
     const wchar_t* environment_block = ::GetEnvironmentStringsW();
@@ -554,7 +555,8 @@ static bool EnvironmentVariableCompleter(const CompleterInput& input,
       if (variable.empty())
         continue;
       if (_wcsnicmp(variable.c_str(), prefix.c_str(), prefix.size()) == 0)
-        results->push_back(variable);  // Intentionally no trailing space.
+        output->results.push_back(
+            variable);  // Intentionally no trailing space.
     }
     ::FreeEnvironmentStringsW(const_cast<wchar_t*>(environment_block));
     return true;
@@ -573,7 +575,7 @@ static const wchar_t* kCmdBuiltins[] = {
 };
 
 static void SearchPathByPrefix(const wstring& prefix,
-                               vector<wstring>* results) {
+                               CompleterOutput* output) {
   const wchar_t* path_var = _wgetenv(L"PATH");
   if (!path_var)
     return;
@@ -586,7 +588,7 @@ static void SearchPathByPrefix(const wstring& prefix,
   for (const auto& builtin : kCmdBuiltins) {
     wstring as_str(builtin);
     if (as_str.substr(0, prefix.size()) == prefix)
-      results->push_back(as_str + L" ");  // Don't need quoting here.
+      output->results.push_back(as_str + L" ");  // Don't need quoting here.
   }
   for (const auto& path : paths) {
     for (const auto& pathext : pathexts) {
@@ -599,8 +601,8 @@ static void SearchPathByPrefix(const wstring& prefix,
           if (tmp.substr(0, prefix.size()) == prefix) {
             // Strip pathext because it's ugly looking.
             // TODO: Quoting.
-            results->push_back(tmp.substr(0, tmp.size() - pathext.size()) +
-                               L" ");
+            output->results.push_back(
+                tmp.substr(0, tmp.size() - pathext.size()) + L" ");
           }
         } while (FindNextFileW(handle, &find_data));
         FindClose(handle);
@@ -612,7 +614,7 @@ static void SearchPathByPrefix(const wstring& prefix,
 // TODO: word 0 should do in path and cwd dirs before slash, but with slash,
 // should be directory or file match in PATHEXT for "out\de<TAB>\chr<TAB>"
 static bool CommandInPathCompleter(const CompleterInput& input,
-                                   vector<wstring>* results) {
+                                   CompleterOutput* output) {
   bool in_word_zero = input.word_index == 0;
   if (in_word_zero) {
     // If there's a slash in the word, the search will fail anyway, but early
@@ -625,8 +627,8 @@ static bool CommandInPathCompleter(const CompleterInput& input,
   if (input.word_data.empty() || in_word_zero) {
     const wstring prefix =
         input.word_data.empty() ? L"" : input.word_data[0].deescaped_word;
-    SearchPathByPrefix(prefix, results);
-    return !results->empty();
+    SearchPathByPrefix(prefix, output);
+    return !output->results.empty();
   }
   return false;
 }
@@ -694,7 +696,7 @@ static void FindFiles(const wstring& prefix,
 }
 
 static bool DirectoryCompleter(const CompleterInput& input,
-                               vector<wstring>* results) {
+                               CompleterOutput* output) {
   if (input.word_data.size() < 1)
     return false;
   const wstring& command = input.word_data[0].deescaped_word;
@@ -704,15 +706,15 @@ static bool DirectoryCompleter(const CompleterInput& input,
     if (input.word_data.size() == 1 || in_word_one) {
       const wstring prefix =
           input.word_data.size() == 1 ? L"" : input.word_data[1].deescaped_word;
-      FindFiles(prefix, true, false, results);
-      return !results->empty();
+      FindFiles(prefix, true, false, &output->results);
+      return !output->results.empty();
     }
   }
   return false;
 }
 
 static bool FilenameCompleter(const CompleterInput& input,
-                              vector<wstring>* results) {
+                              CompleterOutput* output) {
   const wstring prefix = input.word_data.empty()
                              ? L""
                              : input.word_data[input.word_index].deescaped_word;
@@ -720,8 +722,8 @@ static bool FilenameCompleter(const CompleterInput& input,
             false,
             input.word_data.size() >= 1 &&
                 input.word_data[0].deescaped_word == L"git",
-            results);
-  return !results->empty();
+            &output->results);
+  return !output->results.empty();
 }
 
 static DirectoryHistory* g_directory_history;

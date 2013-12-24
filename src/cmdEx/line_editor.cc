@@ -186,7 +186,7 @@ void LineEditor::RegisterCompleter(Completer completer) {
 }
 
 bool LineEditor::IsCompleting() const {
-  return !completion_results_.empty() && completion_word_begin_ != -1;
+  return !completion_output_.results.empty() && completion_word_begin_ != -1;
 }
 
 // This code is redonk. Instead:
@@ -310,8 +310,8 @@ void LineEditor::TabComplete(bool forward_cycle) {
     for (vector<Completer>::const_iterator i(completers_.begin());
         i != completers_.end();
         ++i) {
-      completion_results_.clear();
-      if ((*i)(input, &completion_results_)) {
+      completion_output_.results.clear();
+      if ((*i)(input, &completion_output_)) {
         // We'll be completing from begin_ to position_ subbing in results_.
         // position_ is updated over time, so old end isn't saved.
         started = true;
@@ -329,12 +329,14 @@ void LineEditor::TabComplete(bool forward_cycle) {
     return;
 
   if (started) {
-    completion_index_ = forward_cycle ? 0 : completion_results_.size() - 1;
+    completion_index_ =
+        forward_cycle ? 0 : completion_output_.results.size() - 1;
   } else {
     completion_index_ += forward_cycle ? 1 : -1;
     if (completion_index_ < 0)
-      completion_index_ = completion_results_.size() - 1;
-    else if (completion_index_ >= static_cast<int>(completion_results_.size()))
+      completion_index_ = completion_output_.results.size() - 1;
+    else if (completion_index_ >=
+             static_cast<int>(completion_output_.results.size()))
       completion_index_ = 0;
   }
 
@@ -344,7 +346,7 @@ void LineEditor::TabComplete(bool forward_cycle) {
   position_ = completion_word_begin_;
 
   // Insert the new one.
-  wstring quoted = QuoteWord(completion_results_[completion_index_]);
+  wstring quoted = QuoteWord(completion_output_.results[completion_index_]);
   line_.insert(completion_word_begin_, quoted);
   position_ = completion_word_begin_ + quoted.size();
   completion_word_end_ = position_;

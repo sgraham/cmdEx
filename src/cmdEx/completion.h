@@ -22,9 +22,13 @@ struct CompleterInput {
   int position_in_word;
 };
 
+struct CompleterOutput {
+  vector<wstring> results;
+};
+
 // Return false if can't complete for |input|. Otherwise, fill out |results|.
 typedef bool (*Completer)(const CompleterInput& input,
-                          vector<wstring>* results);
+                          CompleterOutput* output);
 
 void CompletionBreakIntoWords(const wstring& line,
                               vector<WordData>* word_data);
