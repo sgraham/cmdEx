@@ -36,6 +36,8 @@ cmdEx makes some improvements to cmd.exe. Currently:
 
 TODO:
 
+- Quoting got very annoying in 1c94bf1f3 or so; trailing space was intended as
+  spacer and now causes quotes everywhere.
 - Make Ctrl-V paste maybe? (possibly prompt if clipboard contains > 1 \n)
 - Multiline F8 doesn't redraw properly
 - I keep wanting Ctrl-Del to do something, but I'm not sure what. I think
