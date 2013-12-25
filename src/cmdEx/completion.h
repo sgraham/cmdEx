@@ -24,6 +24,11 @@ struct CompleterInput {
 
 struct CompleterOutput {
   vector<wstring> results;
+  bool trailing_space;
+  void Reset() {
+    results.clear();
+    trailing_space = true;
+  }
 };
 
 // Return false if can't complete for |input|. Otherwise, fill out |results|.

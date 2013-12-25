@@ -548,6 +548,7 @@ bool MockCompleterBasic(const CompleterInput& input, CompleterOutput* output) {
   output->results.push_back(L"abxxx");
   output->results.push_back(L"abyyyyy");
   output->results.push_back(L"abz");
+  output->trailing_space = false;
   return true;
 }
 
@@ -704,6 +705,7 @@ bool MockCompleterInMiddle(const CompleterInput& input,
   output->results.push_back(L"abxxx");
   output->results.push_back(L"abyyyyy");
   output->results.push_back(L"abz");
+  output->trailing_space = false;
   return true;
 }
 
@@ -941,6 +943,8 @@ TEST_F(LineEditorTest, CommandHistorySaving) {
   EXPECT_EQ(' ', console.GetCharAt(3, 4));
   EXPECT_EQ(' ', console.GetCharAt(4, 4));
 }
+
+// TODO: trailing_space == true test.
 
 // Ctrl-C to break line
 // Sort complete results somehow?

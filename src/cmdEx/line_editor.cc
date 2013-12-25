@@ -310,7 +310,7 @@ void LineEditor::TabComplete(bool forward_cycle) {
     for (vector<Completer>::const_iterator i(completers_.begin());
         i != completers_.end();
         ++i) {
-      completion_output_.results.clear();
+      completion_output_.Reset();
       if ((*i)(input, &completion_output_)) {
         // We'll be completing from begin_ to position_ subbing in results_.
         // position_ is updated over time, so old end isn't saved.
@@ -347,6 +347,8 @@ void LineEditor::TabComplete(bool forward_cycle) {
 
   // Insert the new one.
   wstring quoted = QuoteWord(completion_output_.results[completion_index_]);
+  if (completion_output_.trailing_space)
+    quoted += L" ";
   line_.insert(completion_word_begin_, quoted);
   position_ = completion_word_begin_ + quoted.size();
   completion_word_end_ = position_;

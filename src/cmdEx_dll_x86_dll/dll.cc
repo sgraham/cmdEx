@@ -403,7 +403,7 @@ static bool GitCommandNameCompleter(const CompleterInput& input,
       for (size_t i = 0; i < ARRAYSIZE(kGitCommandsPorcelain); ++i) {
         wstring tmp = kGitCommandsPorcelain[i];
         if (tmp.substr(0, prefix.size()) == prefix)
-          output->results.push_back(tmp + L" ");
+          output->results.push_back(tmp);
       }
       return true;
     }
@@ -419,7 +419,7 @@ static bool CompletePrefixArray(const CompleterInput& input,
   for (size_t i = 0; i < candidates_size; ++i) {
     wstring tmp(candidates[i]);
     if (tmp.substr(0, prefix.size()) == prefix)
-      results->push_back(tmp + L" ");
+      results->push_back(tmp);
   }
   return !results->empty();
 }
@@ -430,7 +430,7 @@ static bool CompletePrefixVector(const CompleterInput& input,
                                  vector<wstring>* results) {
   for (size_t i = 0; i < candidates.size(); ++i) {
     if (candidates[i].substr(0, prefix.size()) == prefix)
-      results->push_back(candidates[i] + L" ");
+      results->push_back(candidates[i]);
   }
   return !results->empty();
 }
@@ -484,8 +484,9 @@ static bool GitCommandArgCompleter(const CompleterInput& input,
                               input.word_data[2].deescaped_word,
                               kCheckoutLongArgs,
                               ARRAYSIZE(kCheckoutLongArgs),
-                              &output->results))
+                              &output->results)) {
         return true;
+      }
       if (GitRefsHelper(
               input, input.word_data[2].deescaped_word, &output->results))
         return true;
@@ -530,7 +531,7 @@ static bool NinjaTargetCompleter(const CompleterInput& input,
       for (const auto& line : StringSplit(subproc->GetOutput(), L'\n')) {
         wstring target = StringSplit(line, L':')[0];
         if (target.substr(0, prefix.size()) == prefix)
-          output->results.push_back(target + L" ");
+          output->results.push_back(target);
       }
       return true;
     }
@@ -555,9 +556,9 @@ static bool EnvironmentVariableCompleter(const CompleterInput& input,
       if (variable.empty())
         continue;
       if (_wcsnicmp(variable.c_str(), prefix.c_str(), prefix.size()) == 0)
-        output->results.push_back(
-            variable);  // Intentionally no trailing space.
+        output->results.push_back(variable);
     }
+    output->trailing_space = false;
     ::FreeEnvironmentStringsW(const_cast<wchar_t*>(environment_block));
     return true;
   }
@@ -588,7 +589,7 @@ static void SearchPathByPrefix(const wstring& prefix,
   for (const auto& builtin : kCmdBuiltins) {
     wstring as_str(builtin);
     if (as_str.substr(0, prefix.size()) == prefix)
-      output->results.push_back(as_str + L" ");  // Don't need quoting here.
+      output->results.push_back(as_str);  // Don't need quoting here.
   }
   for (const auto& path : paths) {
     for (const auto& pathext : pathexts) {
@@ -600,9 +601,8 @@ static void SearchPathByPrefix(const wstring& prefix,
           wstring tmp = find_data.cFileName;
           if (tmp.substr(0, prefix.size()) == prefix) {
             // Strip pathext because it's ugly looking.
-            // TODO: Quoting.
             output->results.push_back(
-                tmp.substr(0, tmp.size() - pathext.size()) + L" ");
+                tmp.substr(0, tmp.size() - pathext.size()));
           }
         } while (FindNextFileW(handle, &find_data));
         FindClose(handle);
@@ -707,6 +707,7 @@ static bool DirectoryCompleter(const CompleterInput& input,
       const wstring prefix =
           input.word_data.size() == 1 ? L"" : input.word_data[1].deescaped_word;
       FindFiles(prefix, true, false, &output->results);
+      output->trailing_space = false;
       return !output->results.empty();
     }
   }
@@ -723,6 +724,7 @@ static bool FilenameCompleter(const CompleterInput& input,
             input.word_data.size() >= 1 &&
                 input.word_data[0].deescaped_word == L"git",
             &output->results);
+  output->trailing_space = false;
   return !output->results.empty();
 }
 
