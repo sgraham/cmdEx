@@ -46,6 +46,7 @@ TODO:
   line editor.
 - Dir completion not excluding files?
 - Some of the completer code in dll.cc can move to the lib and be tested.
+- Make x64 work (injection, patching, etc.)
 
 
 cmdEx is currently only known to work on Windows 7, 8, and 8.1, and only when
@@ -62,7 +63,7 @@ Build:
 
 Requires: git, svn, cmake, devenv, python in path.
 
-With VS2012+ vars:
+With VS2013 vars:
 C:\...\cmdEx>python sng.py -u           # -u pulls third_party dependencies
 C:\...\cmdEx>third_party\ninja\ninja
 
