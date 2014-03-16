@@ -30,6 +30,9 @@ class MockConsoleInterface : public ConsoleInterface {
  public:
   MockConsoleInterface() : width(50), height(10), cursor_x(0), cursor_y(0) {
     screen_data = new wchar_t[width * height];
+    for (int y = 0; y < height; ++y)
+      for (int x = 0; x < width; ++x)
+        screen_data[y * width + x] = L'!';
   }
   ~MockConsoleInterface() {
     delete[] screen_data;
@@ -60,7 +63,22 @@ class MockConsoleInterface : public ConsoleInterface {
   virtual int SetCursorLocation(int x, int y) {
     cursor_x = x;
     cursor_y = y;
+    while (cursor_y >= height)
+      ScrollByOneLine();
     return 0;  // TODO(scottmg): Test for this.
+  }
+
+  void ScrollByOneLine() {
+    ASSERT_GT(cursor_y, 0);
+    for (int y = 1; y < height; ++y) {
+      wchar_t* prev_line = &screen_data[(y - 1) * width];
+      wchar_t* cur_line = &screen_data[y * width];
+      memmove(prev_line, cur_line, width * sizeof(wchar_t));
+    }
+    for (int x = 0; x < width; ++x) {
+      screen_data[(height - 1) * width + x] = L' ';
+    }
+    --cursor_y;
   }
 
   wchar_t GetCharAt(int x, int y) {
@@ -942,6 +960,37 @@ TEST_F(LineEditorTest, CommandHistorySaving) {
   EXPECT_EQ('f', console.GetCharAt(2, 4));
   EXPECT_EQ(' ', console.GetCharAt(3, 4));
   EXPECT_EQ(' ', console.GetCharAt(4, 4));
+}
+
+TEST_F(LineEditorTest, MultilineCompleteOnLastLine) {
+  // Add the command we're going to complete later.
+  TypeLetters("this line has to be 50 characters or longer, which"  // 50
+              "is the width of console");
+  // Move to the last line.
+  for (int i = 0; i < console.height; ++i) {
+    EXPECT_EQ(
+        LineEditor::kReturnToCmd,
+        le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
+  }
+  ReInit();
+
+  // Complete above command.
+  TypeLetters("th");
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, false, false, false, VK_F8, 0, VK_F8));
+  EXPECT_EQ(LineEditor::kIncomplete,
+            le.HandleKeyEvent(true, false, false, false, 0, 0, VK_END));
+  // We should be at the end of the second line, with both redrawn.
+  EXPECT_EQ('t', console.GetCharAt(0, 8));
+  EXPECT_EQ('h', console.GetCharAt(1, 8));
+  EXPECT_EQ('i', console.GetCharAt(2, 8));
+  EXPECT_EQ('s', console.GetCharAt(3, 8));
+  EXPECT_EQ('h', console.GetCharAt(49, 8));
+  EXPECT_EQ('i', console.GetCharAt(0, 9));
+  EXPECT_EQ('s', console.GetCharAt(1, 9));
+  EXPECT_EQ(23, console.cursor_x);
+  EXPECT_EQ(9, console.cursor_y);
 }
 
 // TODO: trailing_space == true test.
