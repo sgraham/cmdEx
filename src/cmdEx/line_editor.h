@@ -17,6 +17,7 @@ class ConsoleInterface {
  public:
   virtual void GetCursorLocation(int* x, int* y) = 0;
   virtual int GetWidth() = 0;
+  virtual int GetHeight() = 0;
   // |str| not null terminated.
   virtual void DrawString(const wchar_t* str, int count, int x, int y) = 0;
   virtual void FillChar(wchar_t ch, int count, int x, int y) = 0;
@@ -71,6 +72,7 @@ class LineEditor {
   int FindBackwards(int start_at, const char* until);
   int FindForwards(int start_at, const char* until);
   void TabComplete(bool forward_cycle);
+  void ScrollByOneLine();
 
   ConsoleInterface* console_;
   int start_x_;

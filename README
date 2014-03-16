@@ -37,7 +37,6 @@ cmdEx makes some improvements to cmd.exe. Currently:
 TODO:
 
 - Make Ctrl-V paste maybe? (possibly prompt if clipboard contains > 1 \n)
-- Multiline F8 doesn't redraw properly
 - I keep wanting Ctrl-Del to do something, but I'm not sure what. I think
   delete word to the right.
 - Save history more often, and maybe share between instances somehow.

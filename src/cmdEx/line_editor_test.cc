@@ -44,6 +44,9 @@ class MockConsoleInterface : public ConsoleInterface {
   virtual int GetWidth() override {
     return width;
   }
+  virtual int GetHeight() override {
+    return height;
+  }
   virtual void DrawString(const wchar_t* str, int count, int x, int y)
       override {
     ASSERT_GE(x, 0);
@@ -971,14 +974,23 @@ TEST_F(LineEditorTest, MultilineCompleteOnLastLine) {
     EXPECT_EQ(
         LineEditor::kReturnToCmd,
         le.HandleKeyEvent(true, false, false, false, VK_RETURN, 0, VK_RETURN));
+    ReInit();
   }
-  ReInit();
 
   // Complete above command.
   TypeLetters("th");
   EXPECT_EQ(
       LineEditor::kIncomplete,
       le.HandleKeyEvent(true, false, false, false, VK_F8, 0, VK_F8));
+  EXPECT_EQ('t', console.GetCharAt(0, 8));
+  EXPECT_EQ('h', console.GetCharAt(1, 8));
+  EXPECT_EQ('i', console.GetCharAt(2, 8));
+  EXPECT_EQ('s', console.GetCharAt(3, 8));
+  EXPECT_EQ('h', console.GetCharAt(49, 8));
+  EXPECT_EQ('i', console.GetCharAt(0, 9));
+  EXPECT_EQ('s', console.GetCharAt(1, 9));
+  EXPECT_EQ(2, console.cursor_x);
+  EXPECT_EQ(8, console.cursor_y);
   EXPECT_EQ(LineEditor::kIncomplete,
             le.HandleKeyEvent(true, false, false, false, 0, 0, VK_END));
   // We should be at the end of the second line, with both redrawn.

@@ -232,9 +232,19 @@ vector<LineChunk> BreakIntoLineChunks(const wstring& line,
   return chunks;
 }
 
+void LineEditor::ScrollByOneLine() {
+  // This is a bit of a silly way to scroll, but we set the cursor one
+  // past the end, causing scrolling, and then reset it.
+  int height = console_->GetHeight();
+  int cursor_x, cursor_y;
+  console_->GetCursorLocation(&cursor_x, &cursor_y);
+  console_->SetCursorLocation(cursor_x, height);
+  console_->SetCursorLocation(cursor_x, cursor_y);
+}
 
 void LineEditor::RedrawConsole() {
   int width = console_->GetWidth();
+  int height = console_->GetHeight();
   CHECK(width > 0);
   bool cursor_past_end = position_ == static_cast<int>(line_.size());
   vector<LineChunk> chunks = BreakIntoLineChunks(
@@ -242,7 +252,12 @@ void LineEditor::RedrawConsole() {
       start_x_,
       start_y_,
       width);
-  // TODO: At the bottom of the buffer
+  while (chunks[chunks.size() - 1].start_y >= height) {
+    ScrollByOneLine();
+    for (auto& chunk : chunks)
+      --chunk.start_y;
+    --start_y_;
+  }
   int last_drawn_x = start_x_;
   int last_drawn_y = start_y_;
   int modify_start_y_by = 0;

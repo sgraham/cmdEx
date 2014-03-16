@@ -343,6 +343,12 @@ class RealConsole : public ConsoleInterface {
     return screen_buffer_info.dwSize.X;
   }
 
+  virtual int GetHeight() override {
+    CONSOLE_SCREEN_BUFFER_INFO screen_buffer_info;
+    PCHECK(GetConsoleScreenBufferInfo(console_, &screen_buffer_info));
+    return screen_buffer_info.dwSize.Y;
+  }
+
   virtual void DrawString(const wchar_t* str, int count, int x, int y)
       override {
     COORD coord = { static_cast<SHORT>(x), static_cast<SHORT>(y) };
