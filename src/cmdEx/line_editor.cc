@@ -52,25 +52,6 @@ bool IsModifierKey(int vk) {
   return false;
 }
 
-bool GetClipboardAsText(wstring *text) {
-  bool result = false;
-  if (::IsClipboardFormatAvailable(CF_UNICODETEXT)) {
-    if (::OpenClipboard(NULL)) {
-      HGLOBAL hglb = ::GetClipboardData(CF_UNICODETEXT);
-      if (hglb) {
-        wchar_t *raw_text = reinterpret_cast<wchar_t*>(::GlobalLock(hglb));
-        if (text) {
-          *text = wstring(raw_text);
-          result = true;
-          ::GlobalUnlock(hglb);
-        }
-      }
-      ::CloseClipboard();
-    }
-  }
-  return result;
-}
-
 LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
                                                     bool ctrl_down,
                                                     bool alt_down,
@@ -192,7 +173,7 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       command_history_->MoveInHistory(1, line_.substr(0, position_), &line_);
     } else if (!alt_down && ctrl_down && vk == 'V') {
       wstring text;
-      if (GetClipboardAsText(&text)) {
+      if (console_->GetClipboardText(&text)) {
         if (std::count(text.begin(), text.end(), L'\n') > 0 &&
             !second_ctrl_v_was_pending) {
           second_ctrl_v_pending_saved_line_ = line_;

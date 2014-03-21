@@ -23,6 +23,7 @@ class ConsoleInterface {
   virtual void FillChar(wchar_t ch, int count, int x, int y) = 0;
   // Return is amount adjust start_y (when console has been scrolled).
   virtual int SetCursorLocation(int x, int y) = 0;
+  virtual bool GetClipboardText(wstring* text) = 0;
 };
 
 class LineEditor {

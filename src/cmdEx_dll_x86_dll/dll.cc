@@ -383,6 +383,25 @@ class RealConsole : public ConsoleInterface {
     return to_move_start_y;
   }
 
+  virtual bool GetClipboardText(wstring* text) {
+    bool result = false;
+    if (::IsClipboardFormatAvailable(CF_UNICODETEXT)) {
+      if (::OpenClipboard(NULL)) {
+        HGLOBAL hglb = ::GetClipboardData(CF_UNICODETEXT);
+        if (hglb) {
+          wchar_t *raw_text = reinterpret_cast<wchar_t*>(::GlobalLock(hglb));
+          if (text) {
+            *text = wstring(raw_text);
+            result = true;
+            ::GlobalUnlock(hglb);
+          }
+        }
+        ::CloseClipboard();
+      }
+    }
+    return result;
+  }
+
  private:
   HANDLE console_;
 };

@@ -88,11 +88,18 @@ class MockConsoleInterface : public ConsoleInterface {
     return screen_data[y * width + x];
   }
 
+  bool GetClipboardText(wstring* text) {
+    *text = pending_clipboard;
+    pending_clipboard.clear();
+    return true;
+  }
+
   int width;
   int height;
   int cursor_x;
   int cursor_y;
   wchar_t* screen_data;
+  wstring pending_clipboard;
 };
 
 class LineEditorTest : public ::testing::Test {
@@ -1003,6 +1010,41 @@ TEST_F(LineEditorTest, MultilineCompleteOnLastLine) {
   EXPECT_EQ('s', console.GetCharAt(1, 9));
   EXPECT_EQ(23, console.cursor_x);
   EXPECT_EQ(9, console.cursor_y);
+}
+
+TEST_F(LineEditorTest, CtrlVPastes) {
+  TypeLetters("this is some");
+  // Back to in between 'i' and 's' of "is".
+  for (int i = 0; i < 6; ++i) {
+    EXPECT_EQ(
+        LineEditor::kIncomplete,
+        le.HandleKeyEvent(true, false, false, false, VK_LEFT, 0, VK_LEFT));
+  }
+  console.pending_clipboard = L"DOG";
+  EXPECT_EQ(
+      LineEditor::kIncomplete,
+      le.HandleKeyEvent(true, true, false, false, 'V', 0, 'V'));
+  EXPECT_EQ('t', console.GetCharAt(0, 0));
+  EXPECT_EQ('h', console.GetCharAt(1, 0));
+  EXPECT_EQ('i', console.GetCharAt(2, 0));
+  EXPECT_EQ('s', console.GetCharAt(3, 0));
+  EXPECT_EQ(' ', console.GetCharAt(4, 0));
+  EXPECT_EQ('i', console.GetCharAt(5, 0));
+  EXPECT_EQ('D', console.GetCharAt(6, 0));
+  EXPECT_EQ('O', console.GetCharAt(7, 0));
+  EXPECT_EQ('G', console.GetCharAt(8, 0));
+  EXPECT_EQ('s', console.GetCharAt(9, 0));
+  EXPECT_EQ(' ', console.GetCharAt(10, 0));
+  EXPECT_EQ('s', console.GetCharAt(11, 0));
+  EXPECT_EQ('o', console.GetCharAt(12, 0));
+  EXPECT_EQ('m', console.GetCharAt(13, 0));
+  EXPECT_EQ('e', console.GetCharAt(14, 0));
+  EXPECT_EQ(9, console.cursor_x);
+  EXPECT_EQ(0, console.cursor_y);
+}
+
+TEST_F(LineEditorTest, CtrlVMultilineConfirmation) {
+  // TODO
 }
 
 // TODO: trailing_space == true test.
