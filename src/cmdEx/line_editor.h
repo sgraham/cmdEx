@@ -27,14 +27,10 @@ class ConsoleInterface {
 
 class LineEditor {
  public:
-  LineEditor()
-      : console_(NULL),
-        start_x_(0),
-        start_y_(0),
-        position_(0),
-        directory_history_(NULL),
-        command_history_(NULL),
-        completion_index_(-1) {}
+   LineEditor()
+       : console_(NULL), start_x_(0), start_y_(0), position_(0),
+         directory_history_(NULL), command_history_(NULL),
+         completion_index_(-1), second_ctrl_v_pending_saved_position_(-1) {}
 
   // Called initially and on each editing resumption. |directory_history| and
   // |command_history| are not owned.
@@ -90,6 +86,8 @@ class LineEditor {
   int completion_word_end_;
   int completion_index_;
   CompleterOutput completion_output_;
+  wstring second_ctrl_v_pending_saved_line_;
+  int second_ctrl_v_pending_saved_position_;
 };
 
 #endif  // CMDEX_LINE_EDITOR_H_

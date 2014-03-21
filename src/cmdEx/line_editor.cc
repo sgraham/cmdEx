@@ -12,6 +12,8 @@
 #include "cmdEx/directory_history.h"
 #include "common/util.h"
 
+#pragma comment(lib, "user32.lib")
+
 void LineEditor::Init(ConsoleInterface* console,
                       DirectoryHistory* directory_history,
                       CommandHistory* command_history) {
@@ -50,6 +52,25 @@ bool IsModifierKey(int vk) {
   return false;
 }
 
+bool GetClipboardAsText(wstring *text) {
+  bool result = false;
+  if (::IsClipboardFormatAvailable(CF_UNICODETEXT)) {
+    if (::OpenClipboard(NULL)) {
+      HGLOBAL hglb = ::GetClipboardData(CF_UNICODETEXT);
+      if (hglb) {
+        wchar_t *raw_text = reinterpret_cast<wchar_t*>(::GlobalLock(hglb));
+        if (text) {
+          *text = wstring(raw_text);
+          result = true;
+          ::GlobalUnlock(hglb);
+        }
+      }
+      ::CloseClipboard();
+    }
+  }
+  return result;
+}
+
 LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
                                                     bool ctrl_down,
                                                     bool alt_down,
@@ -65,6 +86,15 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
     // completion which is kind of dumb.
     int previous_completion_begin = completion_word_begin_;
     completion_word_begin_ = -1;
+
+    bool second_ctrl_v_was_pending =
+        second_ctrl_v_pending_saved_position_ != -1;
+    if (second_ctrl_v_was_pending) {
+      line_ = second_ctrl_v_pending_saved_line_;
+      position_ = second_ctrl_v_pending_saved_position_;
+    }
+    second_ctrl_v_pending_saved_line_.clear();
+    second_ctrl_v_pending_saved_position_ = -1;
 
     if (alt_down && !ctrl_down && vk == VK_UP) {
       fake_command_ = L"cd..\x0d\x0a";
@@ -101,8 +131,11 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       start_y_ += console_->SetCursorLocation(0, y + 1);
       return kReturnToCmd;
     } else if (!alt_down && !ctrl_down && vk == VK_ESCAPE) {
-      line_ = L"";
-      position_ = 0;
+      // During prompt, Escape cancels.
+      if (!second_ctrl_v_was_pending) {
+        line_ = L"";
+        position_ = 0;
+      }
     } else if (!alt_down && !ctrl_down && vk == VK_BACK) {
       if (position_ == 0 || line_.empty())
         return kIncomplete;
@@ -157,6 +190,21 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       command_history_->MoveInHistory(-1, line_.substr(0, position_), &line_);
     } else if (!alt_down && !ctrl_down && vk == VK_NEXT) {
       command_history_->MoveInHistory(1, line_.substr(0, position_), &line_);
+    } else if (!alt_down && ctrl_down && vk == 'V') {
+      wstring text;
+      if (GetClipboardAsText(&text)) {
+        if (std::count(text.begin(), text.end(), L'\n') > 0 &&
+            !second_ctrl_v_was_pending) {
+          second_ctrl_v_pending_saved_line_ = line_;
+          second_ctrl_v_pending_saved_position_ = position_;
+          line_ = L"<Clipboard contains newline, Ctrl-V again to confirm>";
+          position_ = 0;
+        } else {
+          //vector<wstring> to_paste = StringSplit(text, L'\n');
+          line_.insert(position_, text);
+          position_ += text.size();
+        }
+      }
     } else if (isprint(ascii_char)) {
       line_.insert(position_, 1, ascii_char);
       position_++;
