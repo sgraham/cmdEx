@@ -34,6 +34,12 @@ cmdEx makes some improvements to cmd.exe. Currently:
       history based on current prefix.
     - Ctrl-U/Ctrl-Home delete to beginning of line, Ctrl-K/Ctrl-End delete to
       end of line.
+- Can be added to
+    HKEY_CURRENT_USER\Software\Microsoft\Command Processor\AutoRun
+  to have it inject into all cmd.exe's. This makes the "Terminate batch job"
+  prompt work. (This isn't recommended yet because startup is too slow to have
+  it added to every cmd that's run from scripts, etc.)
+
 
 TODO:
 
@@ -48,11 +54,8 @@ TODO:
 - Dir completion not excluding files?
 - Some of the completer code in dll.cc can move to the lib and be tested.
 - Make x64 work (injection, patching, etc.)
-- Add option to auto-add to
-    HKEY_CURRENT_USER\Software\Microsoft\Command Processor\AutoRun
-  Startup time will need to be made faster first. The PDB thing takes long
-  enough that it'd be bad for all subshells in scripts. But it'd make the
-  batch prompt thing actually useful.
+- Add an option to automate adding/removing registry entry, and speed up
+  startup so that it's fast enough to be reasonable to do so.
 
 
 cmdEx is currently only known to work on Windows 7, 8, and 8.1, and only when
