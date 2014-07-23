@@ -216,15 +216,12 @@ def DoTests(cmd_binary):
 def main():
   print 'x86:'
   DoTests('C:\\Windows\\SysWOW64\\cmd.exe')
-  # TODO(x64)
-  """
   isx64python = sys.maxsize > 2**32
   if isx64python:
     print 'x64:'
     DoTests('C:\\Windows\\System32\\cmd.exe')
   else:
     print 'not running on x64 python, can\'t test x64 cmd.'
-  """
   Test.Report()
 
 
