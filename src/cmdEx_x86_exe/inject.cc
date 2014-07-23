@@ -4,6 +4,7 @@
 
 #include <Windows.h>
 #include <TlHelp32.h>
+#include <direct.h>
 #include <stdio.h>
 
 #include "common/util.h"
@@ -102,6 +103,9 @@ void Inject(DWORD target_pid) {
 int main(int argc, char** argv) {
   if (argc != 2)
     Fatal("no target injection pid specified");
+  char* cwd = _getcwd(NULL, 0);
+  Log("cwd: %s\n", cwd);
+  free(cwd);
   DWORD target_pid = atoi(argv[1]);
   if (target_pid == 0)
     Fatal("argv[1] didn't look like pid");

@@ -146,6 +146,7 @@ HMODULE LoadLibraryInSameLocation(HMODULE self, const char* dll_name) {
   *slash = 0;
   strcat(module_location, "\\");
   strcat(module_location, dll_name);
+  Log("Loading from '%s'", module_location);
   return LoadLibrary(module_location);
 }
 
@@ -154,8 +155,10 @@ HMODULE LoadLibraryInSameLocation(HMODULE self, const char* dll_name) {
 // the same directory as our dll is in.
 void LoadGit2FunctionPointers(HMODULE self) {
   HMODULE git2 = LoadLibraryInSameLocation(self, "git2.dll");
-  if (!git2)
+  if (!git2) {
+    Error("couldn't load git2.dll: %d", GetLastError());
     return;
+  }
 #define X(name) \
   g_##name = reinterpret_cast<decltype(name)*>(GetProcAddress(git2, #name));
   GIT2_FUNCTIONS
@@ -165,8 +168,10 @@ void LoadGit2FunctionPointers(HMODULE self) {
 // TODO: I'm not sure this works for symsrv as it's lazily loaded by dbghelp.
 void LoadDbgHelpFunctionPointers(HMODULE self) {
   HMODULE dbghelp = LoadLibraryInSameLocation(self, "dbghelp.dll");
-  if (!dbghelp)
+  if (!dbghelp) {
+    Error("couldn't load dbghelp.dll: %d", GetLastError());
     return;
+  }
 #define X(name) \
   g_##name = reinterpret_cast<decltype(name)*>(GetProcAddress(dbghelp, #name));
   DBGHELP_FUNCTIONS

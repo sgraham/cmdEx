@@ -33,14 +33,13 @@ DWORD GetParentPid() {
   return 0;
 }
 
-void ChdirToTemp() {
-  char buf[1024];
-  if (!GetTempPath(sizeof(buf), buf))
+void ChdirToTemp(char* into, size_t size) {
+  if (!GetTempPath(size, into))
     return;
 #ifndef NDEBUG
-  fprintf(stderr, "chdir to %s\n", buf);
+  fprintf(stderr, "chdir to %s\n", into);
 #endif
-  _chdir(buf);
+  _chdir(into);
   // TODO: Possibly make a subdir, but then we need to be able to clean up.
 }
 
@@ -116,17 +115,24 @@ int main() {
   // from there, otherwise, try to launch in a reasonable way from the same
   // directory as we're in.
   if (GetFileResource(CMDEX_X86_EXE, NULL, NULL)) {
-    ChdirToTemp();
+    char temp_dir[1024];
+    ChdirToTemp(temp_dir, sizeof(temp_dir));
     if (strcmp(arch, "x86") == 0) {
       ExtractFileResource(CMDEX_X86_EXE, "cmdEx_x86.exe");
       ExtractFileResource(CMDEX_DLL_X86_DLL, "cmdEx_dll_x86.dll");
       ExtractFileResource(GIT2_X86_DLL, "git2.dll");
       ExtractFileResource(DBGHELP_X86_DLL, "dbghelp.dll");
       ExtractFileResource(SYMSRV_X86_DLL, "symsrv.dll");
-      sprintf(buf, "cmdEx_x86.exe %d", parent_pid);
-      // TODO: This needs to not be system for when we add ourselves to cmd's
-      // AutoRun registry key, otherwise we fork bomb.
-      return system(buf);
+      sprintf(buf, "%s\\cmdEx_x86.exe %d", temp_dir, parent_pid);
+      STARTUPINFO si = {0};
+      si.cb = sizeof(si);
+      PROCESS_INFORMATION pi = {0};
+      if (!CreateProcess(
+               NULL, buf, NULL, NULL, TRUE, 0, NULL, temp_dir, &si, &pi))
+        Fatal("CreateProcess '%s' failed: %d", buf, GetLastError());
+      WaitForSingleObject(pi.hProcess, INFINITE);
+      CloseHandle(pi.hProcess);
+      CloseHandle(pi.hThread);
     } else {
       Fatal("todo; extract x64");
     }
