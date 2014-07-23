@@ -124,6 +124,8 @@ int main() {
       ExtractFileResource(DBGHELP_X86_DLL, "dbghelp.dll");
       ExtractFileResource(SYMSRV_X86_DLL, "symsrv.dll");
       sprintf(buf, "cmdEx_x86.exe %d", parent_pid);
+      // TODO: This needs to not be system for when we add ourselves to cmd's
+      // AutoRun registry key, otherwise we fork bomb.
       return system(buf);
     } else {
       Fatal("todo; extract x64");
