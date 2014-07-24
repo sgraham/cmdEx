@@ -118,11 +118,18 @@ int main() {
     char temp_dir[1024];
     ChdirToTemp(temp_dir, sizeof(temp_dir));
     if (strcmp(arch, "x86") == 0) {
+      ULONGLONG start_time = GetTickCount64();
       ExtractFileResource(CMDEX_X86_EXE, "cmdEx_x86.exe");
       ExtractFileResource(CMDEX_DLL_X86_DLL, "cmdEx_dll_x86.dll");
       ExtractFileResource(GIT2_X86_DLL, "git2.dll");
       ExtractFileResource(DBGHELP_X86_DLL, "dbghelp.dll");
       ExtractFileResource(SYMSRV_X86_DLL, "symsrv.dll");
+      ULONGLONG end_time = GetTickCount64();
+      ULONGLONG elapsed = end_time - start_time;
+      fprintf(stderr,
+              "extract time: %lldm%.03fs\n",
+              elapsed / (60 * 1000),
+              (elapsed % (60 * 1000)) / 1000.0);
       sprintf(buf, "%s\\cmdEx_x86.exe %d", temp_dir, parent_pid);
       STARTUPINFO si = {0};
       si.cb = sizeof(si);

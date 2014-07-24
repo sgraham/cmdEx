@@ -103,6 +103,7 @@ void Inject(DWORD target_pid) {
 int main(int argc, char** argv) {
   if (argc != 2)
     Fatal("no target injection pid specified");
+  ULONGLONG start_time = GetTickCount64();
   char* cwd = _getcwd(NULL, 0);
   Log("cwd: %s\n", cwd);
   free(cwd);
@@ -111,5 +112,11 @@ int main(int argc, char** argv) {
     Fatal("argv[1] didn't look like pid");
   Log("injecting into %d", target_pid);
   Inject(target_pid);
+  ULONGLONG end_time = GetTickCount64();
+  ULONGLONG elapsed = end_time - start_time;
+  fprintf(stderr,
+          "inject time: %lldm%.03fs\n",
+          elapsed / (60 * 1000),
+          (elapsed % (60 * 1000)) / 1000.0);
   return 0;
 }
