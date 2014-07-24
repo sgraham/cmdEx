@@ -214,7 +214,7 @@ DWORD APIENTRY GetGitBranch(
   // the error for printing in the string and don't indicate failure at the
   // API level.
   remote[0] = 0;
-  git_buf git_dir;
+  git_buf git_dir = {0};
   git_repository* repo;
   if (!FindGitRepo(&git_dir, &repo)) {
     g_git_buf_free(&git_dir);
@@ -488,7 +488,7 @@ static bool GitRefsHelper(const CompleterInput& input,
                           vector<wstring>* results) {
   CHECK(input.word_data.size() > 2 &&
         input.word_data[0].deescaped_word == L"git");
-  git_buf git_dir;
+  git_buf git_dir = {0};
   git_repository* repo;
   if (!FindGitRepo(&git_dir, &repo))
     return false;
