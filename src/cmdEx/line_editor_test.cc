@@ -1051,5 +1051,4 @@ TEST_F(LineEditorTest, CtrlVMultilineConfirmation) {
 
 // Ctrl-C to break line
 // Sort complete results somehow?
-// Ctrl-V to paste
 // Ctrl-Y (?) to copy line

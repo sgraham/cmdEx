@@ -43,7 +43,7 @@ cmdEx makes some improvements to cmd.exe. Currently:
 
 TODO:
 
-- There's a crash in Alt-Right sometimes. :(
+- There's a crash in Alt-Right sometimes. :( Not sure of repro.
 - ninja && somethi<TAB> tries to complete targets, instead of commands.
 - Ctrl-V multiline doesn't work properly, and needs tests.
 - I keep wanting Ctrl-Del to do something, but I'm not sure what. I think

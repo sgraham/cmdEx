@@ -184,3 +184,20 @@ wstring QuoteWord(const std::wstring& argument) {
     return result;
   }
 }
+
+vector<vector<WordData>> CompletionBreakWordsIntoCommands(
+    const vector<WordData>& words) {
+  vector<vector<WordData>> result;
+  vector<WordData> current;
+  for (const auto& i : words) {
+    if (i.original_word == L"&&" || i.original_word == L"||" ||
+        i.original_word == L"&") {
+      result.push_back(current);
+      current = vector<WordData>();
+      continue;
+    }
+    current.push_back(i);
+  }
+  result.push_back(current);
+  return result;
+}

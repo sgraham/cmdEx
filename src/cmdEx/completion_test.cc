@@ -249,5 +249,46 @@ TEST(CompletionTest, Quoting) {
   EXPECT_EQ(L"\"st uff\\\\\"", QuoteWord(L"st uff\\"));
 }
 
+TEST(CompletionTest, WordsToCommands) {
+  vector<WordData> words;
+  CompletionBreakIntoWords(L"git && ninja && stuff", &words);
+  vector<vector<WordData>> by_command = CompletionBreakWordsIntoCommands(words);
+  EXPECT_EQ(3u, by_command.size());
+  EXPECT_EQ(1u, by_command[0].size());
+  EXPECT_EQ(L"git", by_command[0][0].original_word);
+  EXPECT_EQ(1u, by_command[1].size());
+  EXPECT_EQ(L"ninja", by_command[1][0].original_word);
+  EXPECT_EQ(1u, by_command[2].size());
+  EXPECT_EQ(L"stuff", by_command[2][0].original_word);
+}
+
+TEST(CompletionTest, WordsToCommandsQuoted) {
+  vector<WordData> words;
+  CompletionBreakIntoWords(L"git && echo \"ninja with && stuff\"", &words);
+  vector<vector<WordData>> by_command = CompletionBreakWordsIntoCommands(words);
+  EXPECT_EQ(2u, by_command.size());
+  EXPECT_EQ(1u, by_command[0].size());
+  EXPECT_EQ(L"git", by_command[0][0].original_word);
+  EXPECT_EQ(2u, by_command[1].size());
+  EXPECT_EQ(L"echo", by_command[1][0].original_word);
+  EXPECT_EQ(L"\"ninja with && stuff\"", by_command[1][1].original_word);
+}
+
+TEST(CompletionTest, WordsToCommandsVariousSeparators) {
+  vector<WordData> words;
+  CompletionBreakIntoWords(L"git || ninja & stuff && wee", &words);
+  vector<vector<WordData>> by_command = CompletionBreakWordsIntoCommands(words);
+  EXPECT_EQ(4u, by_command.size());
+  EXPECT_EQ(1u, by_command[0].size());
+  EXPECT_EQ(L"git", by_command[0][0].original_word);
+  EXPECT_EQ(1u, by_command[1].size());
+  EXPECT_EQ(L"ninja", by_command[1][0].original_word);
+  EXPECT_EQ(1u, by_command[2].size());
+  EXPECT_EQ(L"stuff", by_command[2][0].original_word);
+  EXPECT_EQ(1u, by_command[3].size());
+  EXPECT_EQ(L"wee", by_command[3][0].original_word);
+}
+
 // TODO
 // - special executable handling
+// - ^ escape not handled

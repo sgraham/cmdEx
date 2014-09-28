@@ -38,6 +38,10 @@ typedef bool (*Completer)(const CompleterInput& input,
 void CompletionBreakIntoWords(const wstring& line,
                               vector<WordData>* word_data);
 
+// Breaks up by subcommands (&&, ||, &).
+vector<vector<WordData>> CompletionBreakWordsIntoCommands(
+    const vector<WordData>& words);
+
 int CompletionWordIndex(const vector<WordData>& word_data, int position);
 
 wstring QuoteWord(const wstring& argument);

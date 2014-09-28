@@ -346,8 +346,10 @@ int LineEditor::FindForwards(int start_at, const char* until) {
 void LineEditor::TabComplete(bool forward_cycle) {
   bool started = false;
   if (!IsCompleting()) {
+    vector<WordData> words;
+    CompletionBreakIntoWords(line_, &words);
     CompleterInput input;
-    CompletionBreakIntoWords(line_, &input.word_data);
+    input.word_data = words;  // TODO
     input.word_index = CompletionWordIndex(input.word_data, position_);
     input.position_in_word =
         position_ - input.word_data[input.word_index].original_offset;
