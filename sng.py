@@ -55,7 +55,7 @@ CFLAGS = [
     '/wd4100',
     '/wd4530',
     '/wd4800',
-    '/D_WIN32_WINNT=0x0501',
+    '/D_WIN32_WINNT=0x0600',
     '/D_CRT_SECURE_NO_WARNINGS',
     '/DNOMINMAX',
     '/Isrc',

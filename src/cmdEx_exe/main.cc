@@ -57,12 +57,54 @@ bool GetFileResource(int resource_id, unsigned char** data, size_t* size) {
   return true;
 }
 
+FILETIME GetMtimeOfFile(const char* filename) {
+  HANDLE file = CreateFile(
+      filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+  FILETIME ft_write;
+  if (!GetFileTime(file, NULL, NULL, &ft_write))
+    Fatal("Couldn't GetFileTime of '%s'\n", filename);
+  CloseHandle(file);
+  return ft_write;
+}
+
+void SetMtimeOfFile(const char* filename, FILETIME mtime) {
+  HANDLE file = CreateFile(
+      filename, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+  if (!SetFileTime(file, NULL, NULL, &mtime))
+    Fatal("Couldn't SetFileTime of '%s'\n", filename);
+  CloseHandle(file);
+}
+
+FILETIME GetOwnMtime() {
+  char self_name[_MAX_PATH];
+  if (!GetModuleFileName(NULL, self_name, sizeof(self_name)))
+    Fatal("Couldn't GetModuleFileName\n");
+  return GetMtimeOfFile(self_name);
+}
+
+bool MtimeMatchesSelf(const char* filename) {
+  FILETIME own = GetOwnMtime();
+  FILETIME file = GetMtimeOfFile(filename);
+  return own.dwLowDateTime == file.dwLowDateTime &&
+         own.dwHighDateTime == file.dwHighDateTime;
+}
+
 void ExtractFileResource(int resource_id, const char* filename) {
   unsigned char* data;
   size_t size;
 #ifndef NDEBUG
     fprintf(stderr, "Extract: %d %s\n", resource_id, filename);
 #endif
+  if (MtimeMatchesSelf(filename)) {
+#ifndef NDEBUG
+    fprintf(stderr, "  mtime unchanged, skipping\n");
+#endif
+    return;
+  } else {
+#ifndef NDEBUG
+    fprintf(stderr, "  mtime doesn't match, trying extract\n");
+#endif
+  }
   if (GetFileResource(resource_id, &data, &size)) {
 #ifndef NDEBUG
     fprintf(
@@ -90,6 +132,7 @@ void ExtractFileResource(int resource_id, const char* filename) {
 
     fwrite(data, 1, size, fp);
     fclose(fp);
+    SetMtimeOfFile(filename, GetOwnMtime());
   } else {
     Fatal("couldn't get %s as %d", filename, resource_id);
   }
@@ -118,11 +161,20 @@ int main() {
     char temp_dir[1024];
     ChdirToTemp(temp_dir, sizeof(temp_dir));
     if (strcmp(arch, "x86") == 0) {
+      //ULONGLONG start_time = GetTickCount64();
       ExtractFileResource(CMDEX_X86_EXE, "cmdEx_x86.exe");
       ExtractFileResource(CMDEX_DLL_X86_DLL, "cmdEx_dll_x86.dll");
       ExtractFileResource(GIT2_X86_DLL, "git2.dll");
       ExtractFileResource(DBGHELP_X86_DLL, "dbghelp.dll");
       ExtractFileResource(SYMSRV_X86_DLL, "symsrv.dll");
+      /*
+      ULONGLONG end_time = GetTickCount64();
+      ULONGLONG elapsed = end_time - start_time;
+      fprintf(stderr,
+              "extract time: %lldm%.03fs\n",
+              elapsed / (60 * 1000),
+              (elapsed % (60 * 1000)) / 1000.0);
+              */
       sprintf(buf, "%s\\cmdEx_x86.exe %d", temp_dir, parent_pid);
       STARTUPINFO si = {0};
       si.cb = sizeof(si);

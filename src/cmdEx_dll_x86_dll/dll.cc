@@ -25,6 +25,7 @@
 
 #define GIT2_FUNCTIONS \
   X(git_branch_name) \
+  X(git_buf_free) \
   X(git_oid_tostr) \
   X(git_reference_foreach_glob) \
   X(git_reference_free) \
@@ -185,16 +186,15 @@ void TrimRefsHead(char* head) {
     memmove(head, &head[length], strlen(&head[length]) + 1);
 }
 
-static bool FindGitRepo(char* git_dir,
-                        size_t git_dir_size,
+static bool FindGitRepo(git_buf* git_dir,
                         git_repository** repo) {
   char local_path[_MAX_PATH];
   if (GetCurrentDirectory(sizeof(local_path), local_path) == 0)
     return false;
-  if (g_git_repository_discover(git_dir, git_dir_size, local_path, 0, "") !=
+  if (g_git_repository_discover(git_dir, local_path, 0, "") !=
       0)
     return false;
-  if (g_git_repository_open(repo, git_dir) != 0)
+  if (g_git_repository_open(repo, git_dir->ptr) != 0)
     return false;
   return true;
 }
@@ -214,15 +214,18 @@ DWORD APIENTRY GetGitBranch(
   // the error for printing in the string and don't indicate failure at the
   // API level.
   remote[0] = 0;
-  char git_dir[_MAX_PATH];
+  git_buf git_dir = {0};
   git_repository* repo;
-  if (!FindGitRepo(git_dir, sizeof(git_dir), &repo))
+  if (!FindGitRepo(&git_dir, &repo)) {
+    g_git_buf_free(&git_dir);
     return NO_ERROR;
+  }
 
   git_reference* head_ref = NULL;
   if (g_git_repository_head(&head_ref, repo) != 0) {
     // TODO: More useful/fancy here?
     wcscpy(remote, L"[(no head)]");
+    g_git_buf_free(&git_dir);
     g_git_repository_free(repo);
     return NO_ERROR;
   }
@@ -230,35 +233,35 @@ DWORD APIENTRY GetGitBranch(
   char name[_MAX_PATH] = {0};
   char extra[_MAX_PATH] = {0};
 
-  if (IsDirectory(JoinPath(git_dir, "rebase-merge"))) {
-    ReadInto(JoinPath(git_dir, "rebase-merge/head-name"), name);
+  if (IsDirectory(JoinPath(git_dir.ptr, "rebase-merge"))) {
+    ReadInto(JoinPath(git_dir.ptr, "rebase-merge/head-name"), name);
     TrimRefsHead(name);
     char step[_MAX_PATH], total[_MAX_PATH];
-    ReadInto(JoinPath(git_dir, "rebase-merge/msgnum"), step);
-    ReadInto(JoinPath(git_dir, "rebase-merge/end"), total);
+    ReadInto(JoinPath(git_dir.ptr, "rebase-merge/msgnum"), step);
+    ReadInto(JoinPath(git_dir.ptr, "rebase-merge/end"), total);
     sprintf(extra, " %s/%s", step, total);
-  } else if (IsDirectory(JoinPath(git_dir, "rebase-apply"))) {
+  } else if (IsDirectory(JoinPath(git_dir.ptr, "rebase-apply"))) {
     char step[_MAX_PATH], total[_MAX_PATH];
-    ReadInto(JoinPath(git_dir, "rebase-apply/next"), step);
-    ReadInto(JoinPath(git_dir, "rebase-apply/last"), total);
+    ReadInto(JoinPath(git_dir.ptr, "rebase-apply/next"), step);
+    ReadInto(JoinPath(git_dir.ptr, "rebase-apply/last"), total);
     const char* suffix = "";
-    if (IsFile(JoinPath(git_dir, "rebase-apply/rebasing"))) {
-      ReadInto(JoinPath(git_dir, "rebase-apply/head-name"), name);
+    if (IsFile(JoinPath(git_dir.ptr, "rebase-apply/rebasing"))) {
+      ReadInto(JoinPath(git_dir.ptr, "rebase-apply/head-name"), name);
       TrimRefsHead(name);
       suffix = "|REBASE";
-    } else if (IsFile(JoinPath(git_dir, "rebase-apply/applying"))) {
+    } else if (IsFile(JoinPath(git_dir.ptr, "rebase-apply/applying"))) {
       suffix = "|AM";
     } else {
       suffix = "|AM/REBASE";
     }
     sprintf(extra, " %s/%s%s", step, total, suffix);
-  } else if (IsDirectory(JoinPath(git_dir, "MERGE_HEAD"))) {
+  } else if (IsDirectory(JoinPath(git_dir.ptr, "MERGE_HEAD"))) {
     strcpy(extra, "|MERGING");
-  } else if (IsDirectory(JoinPath(git_dir, "CHERRY_PICK_HEAD"))) {
+  } else if (IsDirectory(JoinPath(git_dir.ptr, "CHERRY_PICK_HEAD"))) {
     strcpy(extra, "|CHERRY-PICKING");
-  } else if (IsDirectory(JoinPath(git_dir, "REVERT_HEAD"))) {
+  } else if (IsDirectory(JoinPath(git_dir.ptr, "REVERT_HEAD"))) {
     strcpy(extra, "|REVERTING");
-  } else if (IsDirectory(JoinPath(git_dir, "BISECT_LOG"))) {
+  } else if (IsDirectory(JoinPath(git_dir.ptr, "BISECT_LOG"))) {
     strcpy(extra, "|BISECTING");
   } else {
     const char* head_name = "";
@@ -283,6 +286,7 @@ DWORD APIENTRY GetGitBranch(
   MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, entire, -1, remote, *length);
   // No error to check; if it fails we return empty.
 
+  g_git_buf_free(&git_dir);
   g_git_reference_free(head_ref);
   g_git_repository_free(repo);
   return NO_ERROR;
@@ -484,10 +488,11 @@ static bool GitRefsHelper(const CompleterInput& input,
                           vector<wstring>* results) {
   CHECK(input.word_data.size() > 2 &&
         input.word_data[0].deescaped_word == L"git");
-  char git_dir[_MAX_PATH];
+  git_buf git_dir = {0};
   git_repository* repo;
-  if (!FindGitRepo(git_dir, sizeof(git_dir), &repo))
+  if (!FindGitRepo(&git_dir, &repo))
     return false;
+  g_git_buf_free(&git_dir);
   vector<wstring> candidates;
   bool ok = g_git_reference_foreach_glob(
              repo, "refs/tags/*", ForeachRefCallback, &candidates) == 0 &&
