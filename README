@@ -89,5 +89,8 @@ Acknowledgements:
 
 - src/cmdEx/subprocess* adapted from http://github.com/martine/ninja/.
 
+- Integrates ansi32.dll (unmodified) by Jason Hood from
+  https://github.com/adoxa/ansicon/.
+
 - Similar project, but readline based: http://code.google.com/p/clink/. Some
   of cmdEx's injection code is based on Clink's.

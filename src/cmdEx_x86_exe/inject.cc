@@ -10,7 +10,8 @@
 #include "common/util.h"
 
 #ifdef _M_IX86
-const char g_dll_name[] = "cmdEx_dll_x86.dll";
+const char g_main_dll_name[] = "cmdEx_dll_x86.dll";
+const char g_ansi32_dll_name[] = "ansi32.dll";
 #else
 #error
 #endif
@@ -37,12 +38,12 @@ void SetThreadsRunning(DWORD pid, bool run) {
 }
 
 // Injects our helper DLL into the process identified by |target_pid|.
-void Inject(DWORD target_pid) {
+void Inject(DWORD target_pid, const char* dll_name) {
   char dll_path[1024];
   GetModuleFileName(NULL, dll_path, sizeof(dll_path));
   char* slash = strrchr(dll_path, '\\');
   if (slash)
-    strcpy(slash + 1, g_dll_name);
+    strcpy(slash + 1, dll_name);
 
   // Get a handle to the target process.
   HANDLE target_process =
@@ -111,7 +112,8 @@ int main(int argc, char** argv) {
   if (target_pid == 0)
     Fatal("argv[1] didn't look like pid");
   Log("injecting into %d", target_pid);
-  Inject(target_pid);
+  Inject(target_pid, g_main_dll_name);
+  Inject(target_pid, g_ansi32_dll_name);
   /*
   ULONGLONG end_time = GetTickCount64();
   ULONGLONG elapsed = end_time - start_time;

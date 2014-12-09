@@ -61,8 +61,10 @@ FILETIME GetMtimeOfFile(const char* filename) {
   HANDLE file = CreateFile(
       filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
   FILETIME ft_write;
-  if (!GetFileTime(file, NULL, NULL, &ft_write))
-    Fatal("Couldn't GetFileTime of '%s'\n", filename);
+  if (!GetFileTime(file, NULL, NULL, &ft_write)) {
+    FILETIME none = {0};
+    return none;
+  }
   CloseHandle(file);
   return ft_write;
 }
@@ -138,6 +140,18 @@ void ExtractFileResource(int resource_id, const char* filename) {
   }
 }
 
+void RunProcess(char* command, const char* in_dir) {
+  STARTUPINFO si = {0};
+  si.cb = sizeof(si);
+  PROCESS_INFORMATION pi = {0};
+  if (!CreateProcess(
+        NULL, command, NULL, NULL, TRUE, 0, NULL, in_dir, &si, &pi))
+    Fatal("CreateProcess '%s' failed: %d", command, GetLastError());
+  WaitForSingleObject(pi.hProcess, INFINITE);
+  CloseHandle(pi.hProcess);
+  CloseHandle(pi.hThread);
+}
+
 }  // namespace
 
 int main() {
@@ -167,6 +181,7 @@ int main() {
       ExtractFileResource(GIT2_X86_DLL, "git2.dll");
       ExtractFileResource(DBGHELP_X86_DLL, "dbghelp.dll");
       ExtractFileResource(SYMSRV_X86_DLL, "symsrv.dll");
+      ExtractFileResource(ANSI32_DLL_X86, "ansi32.dll");
       /*
       ULONGLONG end_time = GetTickCount64();
       ULONGLONG elapsed = end_time - start_time;
@@ -176,15 +191,7 @@ int main() {
               (elapsed % (60 * 1000)) / 1000.0);
               */
       sprintf(buf, "%s\\cmdEx_x86.exe %d", temp_dir, parent_pid);
-      STARTUPINFO si = {0};
-      si.cb = sizeof(si);
-      PROCESS_INFORMATION pi = {0};
-      if (!CreateProcess(
-               NULL, buf, NULL, NULL, TRUE, 0, NULL, temp_dir, &si, &pi))
-        Fatal("CreateProcess '%s' failed: %d", buf, GetLastError());
-      WaitForSingleObject(pi.hProcess, INFINITE);
-      CloseHandle(pi.hProcess);
-      CloseHandle(pi.hThread);
+      RunProcess(buf, temp_dir);
     } else {
       Fatal("todo; extract x64");
     }

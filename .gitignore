@@ -6,6 +6,7 @@ build.ninja
 csearchindex
 out/
 tags
+third_party/ansicon
 third_party/googletest
 third_party/libgit2
 third_party/ninja
