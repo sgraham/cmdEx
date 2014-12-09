@@ -82,6 +82,11 @@ Test:
 
 C:\...\cmdEx>out\tests
 C:\...\cmdEx>python test.py
+C:\...\cmdEx>new
+[master]C:\...\cmdEx>type colours.ans
+  <confirm you see 16 glorious colours>
+[master]C:\...\cmdEx>exit
+
 
 
 
