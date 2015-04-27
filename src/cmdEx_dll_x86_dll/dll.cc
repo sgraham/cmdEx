@@ -21,6 +21,7 @@
 #include "cmdEx/string_util.h"
 #include "cmdEx/subprocess.h"
 #include "common/util.h"
+#pragma warning(disable: 4510 4512 4610)  // rebase.h
 #include "git2.h"
 
 #define GIT2_FUNCTIONS \
