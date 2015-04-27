@@ -113,7 +113,8 @@ int main(int argc, char** argv) {
     Fatal("argv[1] didn't look like pid");
   Log("injecting into %d", target_pid);
   Inject(target_pid, g_main_dll_name);
-  Inject(target_pid, g_ansi32_dll_name);
+  // TODO(scottmg): cl.exe from VS2015 is crashing in ansi32.dll.
+  //Inject(target_pid, g_ansi32_dll_name);
   /*
   ULONGLONG end_time = GetTickCount64();
   ULONGLONG elapsed = end_time - start_time;
