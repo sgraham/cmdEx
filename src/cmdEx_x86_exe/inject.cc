@@ -11,7 +11,7 @@
 
 #ifdef _M_IX86
 const char g_main_dll_name[] = "cmdEx_dll_x86.dll";
-const char g_ansi32_dll_name[] = "ansi32.dll";
+//const char g_ansi32_dll_name[] = "ansi32.dll";
 #else
 #error
 #endif

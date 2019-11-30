@@ -7,7 +7,7 @@
 
 TEST(StringUtil, StringSplitStandard) {
   vector<wstring> s = StringSplit(L"a;bcd;;efghi", L';');
-  EXPECT_EQ(4, s.size());
+  EXPECT_EQ(4u, s.size());
   EXPECT_EQ(L"a", s[0]);
   EXPECT_EQ(L"bcd", s[1]);
   EXPECT_EQ(L"", s[2]);
@@ -16,20 +16,20 @@ TEST(StringUtil, StringSplitStandard) {
 
 TEST(StringUtil, StringSplitEndingEmpty) {
   vector<wstring> s = StringSplit(L"a;", L';');
-  EXPECT_EQ(2, s.size());
+  EXPECT_EQ(2u, s.size());
   EXPECT_EQ(L"a", s[0]);
   EXPECT_EQ(L"", s[1]);
 }
 
 TEST(StringUtil, StringSplitStartingEmpty) {
   vector<wstring> s = StringSplit(L";b", L';');
-  EXPECT_EQ(2, s.size());
+  EXPECT_EQ(2u, s.size());
   EXPECT_EQ(L"", s[0]);
   EXPECT_EQ(L"b", s[1]);
 }
 
 TEST(StringUtil, StringSplitNoSplits) {
   vector<wstring> s = StringSplit(L"blorpy", L';');
-  EXPECT_EQ(1, s.size());
+  EXPECT_EQ(1u, s.size());
   EXPECT_EQ(L"blorpy", s[0]);
 }

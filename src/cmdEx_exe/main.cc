@@ -181,7 +181,7 @@ int main() {
       ExtractFileResource(GIT2_X86_DLL, "git2.dll");
       ExtractFileResource(DBGHELP_X86_DLL, "dbghelp.dll");
       ExtractFileResource(SYMSRV_X86_DLL, "symsrv.dll");
-      ExtractFileResource(ANSI32_DLL_X86, "ansi32.dll");
+      //ExtractFileResource(ANSI32_DLL_X86, "ansi32.dll");
       /*
       ULONGLONG end_time = GetTickCount64();
       ULONGLONG elapsed = end_time - start_time;

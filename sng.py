@@ -37,17 +37,13 @@ def DEP_ninja(action):
     elif os.path.exists('third_party/ninja/ninja'):
       Run(['ninja'], cwd='third_party/ninja')
     else:
-      Run([sys.executable, 'bootstrap.py'], cwd='third_party/ninja')
+      Run([sys.executable, 'configure.py', '--bootstrap'],
+          cwd='third_party/ninja')
 
 
 def DEP_googletest(action):
   if action == 'sync':
-    if not os.path.exists('third_party/googletest/.svn'):
-      Run(['svn', 'checkout',
-           'http://googletest.googlecode.com/svn/trunk/@HEAD', 'googletest'],
-          cwd='third_party')
-    else:
-      Run(['svn', 'up'], cwd='third_party/googletest')
+    GitPullOrClone('https://github.com/google/googletest.git')
 
 
 CFLAGS = [
@@ -209,7 +205,8 @@ def Generate(is_debug):
 
     cflags_test = cflags[:]
     cflags_test += [
-        '/Ithird_party/googletest/include',
+        '/Ithird_party/googletest/googletest/include',
+        '/Ithird_party/googletest/googletest',
         '/D_VARIADIC_MAX=10',
       ]
     GetFromDeps(cflags_test, 'cflags_test')
@@ -278,10 +275,10 @@ def Generate(is_debug):
       gtest_main = '$builddir/gtest_main.obj'
       gtest_cflags = '$cflags_test /wd4100 /Ithird_party/googletest'
       n.build(gtest_obj, 'cxx',
-              'third_party/googletest/src/gtest-all.cc',
+              'third_party/googletest/googletest/src/gtest-all.cc',
               variables=(('cflags', gtest_cflags),))
       n.build(gtest_main, 'cxx',
-              'third_party/googletest/src/gtest_main.cc',
+              'third_party/googletest/googletest/src/gtest_main.cc',
               variables=(('cflags', gtest_cflags),))
       test_binary = '$builddir/tests.exe'
       n.build(test_binary, 'link',
