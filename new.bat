@@ -2,4 +2,4 @@
 :: Use of this source code is governed by a BSD-style license that can be
 :: found in the LICENSE file.
 @echo off
-%WINDIR%\SysWOW64\cmd.exe /k out\cmdex.exe
+%WINDIR%\System32\cmd.exe /k out\cmdex.exe

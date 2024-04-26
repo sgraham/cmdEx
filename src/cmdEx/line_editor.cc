@@ -160,13 +160,13 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
       position_ = 0;
     } else if ((!alt_down && !ctrl_down && vk == VK_END) ||
                (!alt_down && ctrl_down && vk == 'E')) {
-      position_ = line_.size();
+      position_ = static_cast<int>(line_.size());
     } else if (!alt_down && !ctrl_down && vk == VK_UP) {
       if (command_history_->MoveInHistory(-1, L"", &line_))
-        position_ = line_.size();
+        position_ = static_cast<int>(line_.size());
     } else if (!alt_down && !ctrl_down && vk == VK_DOWN) {
       if (command_history_->MoveInHistory(1, L"", &line_))
-        position_ = line_.size();
+        position_ = static_cast<int>(line_.size());
     } else if (!alt_down && !ctrl_down && (vk == VK_PRIOR || vk == VK_F8)) {
       command_history_->MoveInHistory(-1, line_.substr(0, position_), &line_);
     } else if (!alt_down && !ctrl_down && vk == VK_NEXT) {
@@ -183,7 +183,7 @@ LineEditor::HandleAction LineEditor::HandleKeyEvent(bool pressed,
         } else {
           //vector<wstring> to_paste = StringSplit(text, L'\n');
           line_.insert(position_, text);
-          position_ += text.size();
+          position_ += static_cast<int>(text.size());
         }
       }
     } else if (isprint(ascii_char)) {
@@ -200,11 +200,11 @@ void LineEditor::ToCmdBuffer(wchar_t* buffer,
                              unsigned long* num_chars) {
   if (!fake_command_.empty()) {
     wcscpy_s(buffer, buffer_size, fake_command_.c_str());
-    *num_chars = fake_command_.size();
+    *num_chars = static_cast<int>(fake_command_.size());
     fake_command_.clear();
   } else {
     wcscpy_s(buffer, buffer_size, line_.c_str());
-    *num_chars = line_.size();
+    *num_chars = static_cast<int>(line_.size());
     line_.clear();
     position_ = 0;
   }
@@ -295,11 +295,9 @@ void LineEditor::RedrawConsole() {
     size_t to_draw = chunk.contents.size();
     if (i == chunks.size() - 1 && cursor_past_end)
       --to_draw;
-    console_->DrawString(chunk.contents.c_str(),
-                         to_draw,
-                         chunk.start_x,
-                         chunk.start_y);
-    last_drawn_x = chunk.start_x + to_draw;
+    console_->DrawString(chunk.contents.c_str(), static_cast<int>(to_draw),
+                         chunk.start_x, chunk.start_y);
+    last_drawn_x = static_cast<int>(chunk.start_x + to_draw);
     last_drawn_y = chunk.start_y;
     if (position_ >= chunk.start_offset &&
         position_ <
@@ -363,9 +361,9 @@ void LineEditor::TabComplete(bool forward_cycle) {
         started = true;
         completion_word_begin_ =
             input.word_data[input.word_index].original_offset;
-        completion_word_end_ =
+        completion_word_end_ = static_cast<int>(
             completion_word_begin_ +
-            input.word_data[input.word_index].original_word.size();
+            input.word_data[input.word_index].original_word.size());
         break;
       }
     }
@@ -376,11 +374,12 @@ void LineEditor::TabComplete(bool forward_cycle) {
 
   if (started) {
     completion_index_ =
-        forward_cycle ? 0 : completion_output_.results.size() - 1;
+        forward_cycle ? 0
+                      : static_cast<int>(completion_output_.results.size()) - 1;
   } else {
     completion_index_ += forward_cycle ? 1 : -1;
     if (completion_index_ < 0)
-      completion_index_ = completion_output_.results.size() - 1;
+      completion_index_ = static_cast<int>(completion_output_.results.size()) - 1;
     else if (completion_index_ >=
              static_cast<int>(completion_output_.results.size()))
       completion_index_ = 0;
@@ -396,7 +395,7 @@ void LineEditor::TabComplete(bool forward_cycle) {
   if (completion_output_.trailing_space)
     quoted += L" ";
   line_.insert(completion_word_begin_, quoted);
-  position_ = completion_word_begin_ + quoted.size();
+  position_ = static_cast<int>(completion_word_begin_ + quoted.size());
   completion_word_end_ = position_;
   RedrawConsole();
 }

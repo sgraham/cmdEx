@@ -4,7 +4,6 @@
 
 #include <windows.h>
 #include <DelayImp.h>
-#include <DbgHelp.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -21,12 +20,12 @@
 #include "cmdEx/string_util.h"
 #include "cmdEx/subprocess.h"
 #include "common/util.h"
-#pragma warning(disable: 4510 4512 4610)  // rebase.h
 #include "git2.h"
 
 #define GIT2_FUNCTIONS \
   X(git_branch_name) \
-  X(git_buf_free) \
+  X(git_buf_dispose) \
+  X(git_libgit2_init) \
   X(git_oid_tostr) \
   X(git_reference_foreach_glob) \
   X(git_reference_free) \
@@ -39,18 +38,8 @@
   X(git_repository_open) \
 
 
-#define DBGHELP_FUNCTIONS \
-  X(SymCleanup) \
-  X(SymFromName) \
-  X(SymInitialize) \
-  X(SymLoadModule64) \
-  X(SymSetOptions) \
-  X(SymSetSearchPath) \
-
-
 #define X(name) decltype(name)* g_ ## name;
 GIT2_FUNCTIONS
-DBGHELP_FUNCTIONS
 #undef X
 
 bool IsDirectory(const string& path) {
@@ -165,19 +154,10 @@ void LoadGit2FunctionPointers(HMODULE self) {
   g_##name = reinterpret_cast<decltype(name)*>(GetProcAddress(git2, #name));
   GIT2_FUNCTIONS
 #undef X
-}
 
-// TODO: I'm not sure this works for symsrv as it's lazily loaded by dbghelp.
-void LoadDbgHelpFunctionPointers(HMODULE self) {
-  HMODULE dbghelp = LoadLibraryInSameLocation(self, "dbghelp.dll");
-  if (!dbghelp) {
-    Error("couldn't load dbghelp.dll: %d", GetLastError());
-    return;
+  if (g_git_libgit2_init() != 1) {
+    Error("libgit2_init did not return 1");
   }
-#define X(name) \
-  g_##name = reinterpret_cast<decltype(name)*>(GetProcAddress(dbghelp, #name));
-  DBGHELP_FUNCTIONS
-#undef X
 }
 
 void TrimRefsHead(char* head) {
@@ -187,13 +167,11 @@ void TrimRefsHead(char* head) {
     memmove(head, &head[length], strlen(&head[length]) + 1);
 }
 
-static bool FindGitRepo(git_buf* git_dir,
-                        git_repository** repo) {
+static bool FindGitRepo(git_buf* git_dir, git_repository** repo) {
   char local_path[_MAX_PATH];
   if (GetCurrentDirectory(sizeof(local_path), local_path) == 0)
     return false;
-  if (g_git_repository_discover(git_dir, local_path, 0, "") !=
-      0)
+  if (g_git_repository_discover(git_dir, local_path, 1, "") != 0)
     return false;
   if (g_git_repository_open(repo, git_dir->ptr) != 0)
     return false;
@@ -215,10 +193,10 @@ DWORD APIENTRY GetGitBranch(
   // the error for printing in the string and don't indicate failure at the
   // API level.
   remote[0] = 0;
-  git_buf git_dir = {0};
+  git_buf git_dir = GIT_BUF_INIT;
   git_repository* repo;
   if (!FindGitRepo(&git_dir, &repo)) {
-    g_git_buf_free(&git_dir);
+    g_git_buf_dispose(&git_dir);
     return NO_ERROR;
   }
 
@@ -226,7 +204,7 @@ DWORD APIENTRY GetGitBranch(
   if (g_git_repository_head(&head_ref, repo) != 0) {
     // TODO: More useful/fancy here?
     wcscpy(remote, L"[(no head)]");
-    g_git_buf_free(&git_dir);
+    g_git_buf_dispose(&git_dir);
     g_git_repository_free(repo);
     return NO_ERROR;
   }
@@ -287,13 +265,13 @@ DWORD APIENTRY GetGitBranch(
   MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, entire, -1, remote, *length);
   // No error to check; if it fails we return empty.
 
-  g_git_buf_free(&git_dir);
+  g_git_buf_dispose(&git_dir);
   g_git_reference_free(head_ref);
   g_git_repository_free(repo);
   return NO_ERROR;
 }
 
-void* RvaToAddr(void* base, unsigned int rva) {
+void* RvaToAddr(void* base, uintptr_t rva) {
   return reinterpret_cast<char*>(rva) + reinterpret_cast<uintptr_t>(base);
 }
 
@@ -489,11 +467,11 @@ static bool GitRefsHelper(const CompleterInput& input,
                           vector<wstring>* results) {
   CHECK(input.word_data.size() > 2 &&
         input.word_data[0].deescaped_word == L"git");
-  git_buf git_dir = {0};
+  git_buf git_dir = GIT_BUF_INIT;
   git_repository* repo;
   if (!FindGitRepo(&git_dir, &repo))
     return false;
-  g_git_buf_free(&git_dir);
+  g_git_buf_dispose(&git_dir);
   vector<wstring> candidates;
   bool ok = g_git_reference_foreach_glob(
              repo, "refs/tags/*", ForeachRefCallback, &candidates) == 0 &&
@@ -981,7 +959,7 @@ void** GetImportByName(void* base, const char* dll, const char* func_name) {
 }
 
 void ReadMemory(void* addr, void* dest, size_t bytes) {
-  DWORD bytes_written;
+  SIZE_T bytes_written;
   BOOL ret =
       ReadProcessMemory(GetCurrentProcess(), addr, dest, bytes, &bytes_written);
   if (!ret)
@@ -991,7 +969,7 @@ void ReadMemory(void* addr, void* dest, size_t bytes) {
 void WriteMemory(void* addr, const void* src, size_t bytes) {
   DWORD previous_protect;
   if (VirtualProtect(addr, bytes, PAGE_EXECUTE_READWRITE, &previous_protect)) {
-    DWORD bytes_written;
+    SIZE_T bytes_written;
     BOOL ret = WriteProcessMemory(
         GetCurrentProcess(), addr, src, bytes, &bytes_written);
     if (!ret)
@@ -1007,6 +985,7 @@ void WriteMemory(void* addr, const void* src, size_t bytes) {
   }
 }
 
+#if 0
 void PatchTerminateBatchJobPrompt() {
   // Ctrl-C during a batch file looks like:
   //
@@ -1098,6 +1077,7 @@ void PatchTerminateBatchJobPrompt() {
 
   g_SymCleanup(process);
 }
+#endif
 
 void* g_veh;
 unsigned char* g_hook_trap_addr;
@@ -1112,22 +1092,35 @@ LONG WINAPI HookTrap(EXCEPTION_POINTERS* info) {
   if (er->ExceptionAddress != g_hook_trap_addr)
     return EXCEPTION_CONTINUE_SEARCH;
 
-#ifdef _M_IX86
-  void** sp = reinterpret_cast<void**>(info->ContextRecord->Esp);
+#ifdef _M_X64
+  void** sp = reinterpret_cast<void**>(info->ContextRecord->Rsp);
 #else
 #error
 #endif
   void* caller = *sp;
   unsigned char* bytes_at_callsite = reinterpret_cast<unsigned char*>(caller);
-  if (bytes_at_callsite[0] == 0x83 &&
-      bytes_at_callsite[1] == 0xf8 &&
-      bytes_at_callsite[2] == 0x04 &&
-      bytes_at_callsite[3] == 0x0f &&
-      bytes_at_callsite[4] == 0x85) {
+
+  unsigned char* check_location = bytes_at_callsite;
+
+  // sometimes preceded by a long nop
+  // 0F 1F 44 00 00       nop         dword ptr [rax+rax]  
+  if (bytes_at_callsite[0] == 0x0f &&
+      bytes_at_callsite[1] == 0x1f &&
+      bytes_at_callsite[2] == 0x44 &&
+      bytes_at_callsite[3] == 0x00 &&
+      bytes_at_callsite[4] == 0x00) {
+    check_location = bytes_at_callsite + 5;
+  }
+
+  if (check_location[0] == 0x83 &&
+      check_location[1] == 0xf8 &&
+      check_location[2] == 0x04 &&
+      check_location[3] == 0x0f &&
+      check_location[4] == 0x85) {
     // Matches cmp eax, 4
     //         jnz ...
     unsigned char fixed_drive = DRIVE_FIXED;
-    WriteMemory(&bytes_at_callsite[2], &fixed_drive, sizeof(fixed_drive));
+    WriteMemory(&check_location[2], &fixed_drive, sizeof(fixed_drive));
   }
 
   // Restore original instruction in GetDriveType.
@@ -1154,19 +1147,18 @@ LONG WINAPI HookTrap(EXCEPTION_POINTERS* info) {
   func_addr = ReadConsoleReplacement;
   WriteMemory(imp, &func_addr, sizeof(imp));
 
-  // Patch msvcrt!exit in the same way. Save original so we can call it to
-  // actually exit.
-  imp = GetImportByName(GetModuleHandle(NULL), NULL, "exit");
+  // Patch exit in the same way. Save original so we can call it to actually
+  // exit. Older cmd's were msvcrt!exit, this is post-CRT-dll split up mess, but
+  // seems to take a single int qword still.
+  imp = GetImportByName(GetModuleHandle(NULL), NULL, "_o_exit");
   if (!imp)
-    imp = GetImportByName(GetModuleHandle(NULL), NULL, "exit");
-  if (!imp)
-    Error("couldn't get import for exit");
+    Error("couldn't get import for _o_exit");
   func_addr = ExitReplacement;
   ReadMemory(imp, &g_original_exit, sizeof(imp));
   WriteMemory(imp, &func_addr, sizeof(imp));
 
   // Patch "Terminate?" prompt code.
-  PatchTerminateBatchJobPrompt();
+  //PatchTerminateBatchJobPrompt();
 
   FlushInstructionCache(GetCurrentProcess(), 0, 0);
 
@@ -1200,7 +1192,6 @@ void OnAttach(HMODULE self) {
   _putenv("PROMPT=$M$H$P$G");
 
   LoadGit2FunctionPointers(self);
-  LoadDbgHelpFunctionPointers(self);
 
   CHECK(!g_command_history);
   g_command_history = new CommandHistory;

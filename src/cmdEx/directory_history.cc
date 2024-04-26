@@ -46,6 +46,6 @@ bool DirectoryHistory::CommitLastKnown() {
     }
   }
   dirs_.push_back(last_known_);
-  position_ = dirs_.size();
+  position_ = static_cast<int>(dirs_.size());
   return true;
 }

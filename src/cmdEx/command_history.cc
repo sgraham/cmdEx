@@ -10,7 +10,7 @@ CommandHistory::CommandHistory() : position_(-1) {}
 
 void CommandHistory::Populate(const vector<wstring>& commands) {
   commands_ = commands;
-  position_ = commands_.size();
+  position_ = static_cast<int>(commands_.size());
 }
 
 vector<wstring> CommandHistory::GetListForSaving() {
@@ -21,7 +21,7 @@ void CommandHistory::AddCommand(const wstring& command) {
   // TODO: Maybe remove from old location so there's only one copy of it
   // closest to the end?
   commands_.push_back(command);
-  position_ = commands_.size();
+  position_ = static_cast<int>(commands_.size());
 }
 
 bool CommandHistory::MoveInHistory(int direction, const wstring& prefix, wstring* result) {
@@ -32,7 +32,7 @@ bool CommandHistory::MoveInHistory(int direction, const wstring& prefix, wstring
   position_ += direction;
   for (;;) {
     if (position_ < 0)
-      position_ = commands_.size() - 1;
+      position_ = static_cast<int>(commands_.size()) - 1;
     if (position_ >= static_cast<int>(commands_.size()))
       position_ = 0;
     if (prefix.empty())

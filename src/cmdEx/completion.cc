@@ -15,7 +15,7 @@ static void CopyArg(const wchar_t* line_start,
                     const wchar_t* arg_end,
                     vector<WordData>* word_data) {
   WordData wd;
-  wd.original_offset = arg_start - line_start;
+  wd.original_offset = static_cast<int>(arg_start - line_start);
   wd.original_word.reserve(arg_end - arg_start);
   for (const wchar_t* i = arg_start; i != arg_end; ++i)
     wd.original_word.push_back(*i);

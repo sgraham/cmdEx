@@ -34,7 +34,7 @@ DWORD GetParentPid() {
 }
 
 void ChdirToTemp(char* into, size_t size) {
-  if (!GetTempPath(size, into))
+  if (!GetTempPath(static_cast<DWORD>(size), into))
     return;
 #ifndef NDEBUG
   fprintf(stderr, "chdir to %s\n", into);
@@ -110,7 +110,7 @@ void ExtractFileResource(int resource_id, const char* filename) {
   if (GetFileResource(resource_id, &data, &size)) {
 #ifndef NDEBUG
     fprintf(
-        stderr, "writing %d to %s (%d bytes)\n", resource_id, filename, size);
+        stderr, "writing %d to %s (%zd bytes)\n", resource_id, filename, size);
 #endif
     FILE* fp = fopen(filename, "wb");
     if (!fp) {
@@ -171,29 +171,18 @@ int main() {
   // If we have embedded resources, extract them to a temporary folder and run
   // from there, otherwise, try to launch in a reasonable way from the same
   // directory as we're in.
-  if (GetFileResource(CMDEX_X86_EXE, NULL, NULL)) {
+  if (GetFileResource(CMDEX_X64_EXE, NULL, NULL)) {
     char temp_dir[1024];
     ChdirToTemp(temp_dir, sizeof(temp_dir));
-    if (strcmp(arch, "x86") == 0) {
+    if (strcmp(arch, "x64") == 0) {
       //ULONGLONG start_time = GetTickCount64();
-      ExtractFileResource(CMDEX_X86_EXE, "cmdEx_x86.exe");
-      ExtractFileResource(CMDEX_DLL_X86_DLL, "cmdEx_dll_x86.dll");
-      ExtractFileResource(GIT2_X86_DLL, "git2.dll");
-      ExtractFileResource(DBGHELP_X86_DLL, "dbghelp.dll");
-      ExtractFileResource(SYMSRV_X86_DLL, "symsrv.dll");
-      //ExtractFileResource(ANSI32_DLL_X86, "ansi32.dll");
-      /*
-      ULONGLONG end_time = GetTickCount64();
-      ULONGLONG elapsed = end_time - start_time;
-      fprintf(stderr,
-              "extract time: %lldm%.03fs\n",
-              elapsed / (60 * 1000),
-              (elapsed % (60 * 1000)) / 1000.0);
-              */
-      sprintf(buf, "%s\\cmdEx_x86.exe %d", temp_dir, parent_pid);
+      ExtractFileResource(CMDEX_X64_EXE, "cmdEx_x64.exe");
+      ExtractFileResource(CMDEX_DLL_X64_DLL, "cmdEx_dll_x64.dll");
+      ExtractFileResource(GIT2_X64_DLL, "git2.dll");
+      sprintf(buf, "%s\\cmdEx_x64.exe %d", temp_dir, parent_pid);
       RunProcess(buf, temp_dir);
     } else {
-      Fatal("todo; extract x64");
+      Fatal("todo; extract x86");
     }
   } else {
     char module_location[1024];
